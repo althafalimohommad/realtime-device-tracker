@@ -239,6 +239,15 @@ socket.on("receive-location", async (data) => {
         const decrypted = await encryption.decrypt(encrypted, encryptionKey);
         const { latitude, longitude, timestamp, accuracy, speed, altitude, connection } = decrypted;
         
+        // Update device object with location data for locate feature
+        const device = devices.get(id);
+        if (device) {
+            device.latitude = latitude;
+            device.longitude = longitude;
+            device.battery = battery;
+            device.charging = charging;
+        }
+        
         // Battery icon and color
         const getBatteryIcon = (level, isCharging) => {
             if (isCharging) return '🔌';
