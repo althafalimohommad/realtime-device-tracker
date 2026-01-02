@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Shared Location - <%= deviceName %></title>
+   <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" 
+    integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" 
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        .share-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 1000;
+            text-align: center;
+        }
+        .share-header h2 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .share-header p {
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        #map {
+            top: 100px;
+        }
+        .info-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            z-index: 1000;
+            min-width: 300px;
+            text-align: center;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .status-online {
+            background: #10b981;
+            color: white;
+        }
+        .status-offline {
+            background: #ef4444;
+            color: white;
+        }
+        .maps-link {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .maps-link:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+
+<body>
+   <!-- Share Header -->
+   <div class="share-header">
+       <h2>📍 Shared Location</h2>
+       <p><%= deviceName %> is sharing their location with you</p>
+   </div>
+
+   <!-- Map Container -->
+   <div id="map"></div>
+
+   <!-- Info Panel -->
+   <div class="info-panel">
+       <h3 id="deviceName"><%= deviceName %></h3>
+       <div id="status" class="status-badge status-online">🔴 Loading...</div>
+       <div id="locationInfo" style="margin-top: 10px; font-size: 14px; color: #666;"></div>
+   </div>
+
+   <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" 
+    integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" 
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script>
+        const token = '<%= token %>';
+        
+        // Initialize map
+        const map = L.map("map").setView([0, 0], 2);
+        
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "OpenStreetMap"
+        }).addTo(map);
+        
+        let marker = null;
+        
+        // Fetch location periodically
+        async function fetchLocation() {
+            try {
+                const response = await fetch(`/api/share/${token}`);
+                
+                if (!response.ok) {
+                    document.getElementById('status').textContent = '❌ Link Expired';
+                    document.getElementById('status').className = 'status-badge status-offline';
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                document.getElementById('status').textContent = '🟢 Online';
+                document.getElementById('status').className = 'status-badge status-online';
+                
+                const lastSeen = new Date(data.lastSeen).toLocaleString();
+                const batteryInfo = data.battery !== null ? 
+                    `${data.charging ? '🔌' : '🔋'} ${data.battery}%` : 'N/A';
+                
+                // Display location if available
+                if (data.latitude && data.longitude) {
+                    const googleMapsUrl = `https://www.google.com/maps?q=${data.latitude},${data.longitude}`;
+                    
+                    document.getElementById('locationInfo').innerHTML = `
+                        📍 <strong>Coordinates:</strong><br>
+                        Lat: ${data.latitude.toFixed(6)}<br>
+                        Lng: ${data.longitude.toFixed(6)}<br>
+                        Battery: ${batteryInfo}<br>
+                        Last Update: ${lastSeen}<br>
+                        <a href="${googleMapsUrl}" target="_blank" class="maps-link">🗺️ Open in Google Maps</a>
+                    `;
+                    
+                    // Update or create marker
+                    if (marker) {
+                        marker.setLatLng([data.latitude, data.longitude]);
+                    } else {
+                        marker = L.marker([data.latitude, data.longitude]).addTo(map);
+                        marker.bindPopup(`
+                            <div style="text-align: center;">
+                                <b>${data.deviceIcon} ${data.deviceName}</b><br>
+                                <small>${batteryInfo}</small>
+                            </div>
+                        `).openPopup();
+                        map.setView([data.latitude, data.longitude], 15);
+                    }
+                } else {
+                    document.getElementById('locationInfo').innerHTML = `
+                        Battery: ${batteryInfo}<br>
+                        Last Update: ${lastSeen}<br>
+                        <small style="color: #999;">📍 Waiting for location...</small>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Error fetching location:', error);
+                document.getElementById('status').textContent = '❌ Offline';
+                document.getElementById('status').className = 'status-badge status-offline';
+            }
+        }
+        
+        // Fetch immediately and then every 5 seconds
+        fetchLocation();
+        setInterval(fetchLocation, 5000);
+    </script>
+</body>
+
+</html>
