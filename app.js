@@ -119,6 +119,7 @@ io.on("connection", function(socket) {
         // Send devices to this user only (instant room broadcast)
         if (data.userId) {
             const userDevices = Array.from(devices.values()).filter(d => d.userId === data.userId);
+            // Broadcast to ALL devices in this user's room (including the new one)
             io.to(`user_${data.userId}`).emit("devices-update", userDevices);
         }
     });
