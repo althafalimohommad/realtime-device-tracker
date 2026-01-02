@@ -3,12 +3,26 @@
   "version": "1.0.0",
   "main": "app.js",
   "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": [
+    "device-tracker",
+    "real-time",
+    "location-tracking",
+    "find-my-device",
+    "socket.io",
+    "google-oauth",
+    "end-to-end-encryption"
+  ],
+  "author": "Mohmad Althaf Ali <althafalimohommad@github.com>",
+  "license": "MIT",
+  "description": "Real-time device tracking application with Google OAuth, end-to-end encryption, and location sharing",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/althafalimohommad/realtime-device-tracker.git"
+  },
   "dependencies": {
     "dotenv": "^17.2.3",
     "ejs": "^3.1.10",
