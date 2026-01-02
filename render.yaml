@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: realtime-device-tracker
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /login
+    envVars:
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: CALLBACK_URL
+        value: https://realtime-device-tracker.onrender.com/auth/google/callback
+      - key: NODE_ENV
+        value: production

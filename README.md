@@ -91,6 +91,33 @@ npm start
 http://localhost:3000
 ```
 
+## 🌐 Deploy to Production
+
+### Quick Deploy to Render (Free)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
+
+1. Click the "Deploy to Render" button above
+2. Connect your GitHub account
+3. Add environment variables (Google OAuth credentials)
+4. Click "Create Web Service"
+5. Your app will be live at: `https://your-app-name.onrender.com`
+
+**📖 Detailed deployment guide**: See [DEPLOYMENT.md](DEPLOYMENT.md) for:
+- Step-by-step deployment instructions
+- Custom domain setup
+- Free SSL configuration
+- Platform comparisons (Render, Railway, DigitalOcean)
+- Troubleshooting tips
+
+### Environment Variables for Production
+```env
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=your-client-secret
+SESSION_SECRET=generate-random-32-char-string
+CALLBACK_URL=https://yourdomain.com/auth/google/callback
+```
+
 ## 📦 Dependencies
 
 ```json
