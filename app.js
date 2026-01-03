@@ -625,10 +625,17 @@ app.get('/admin', function(req, res) {
 // Admin API - Get all users and devices
 app.get('/api/admin/users', isAdmin, async function(req, res) {
     try {
+        // Get real IP address (works with proxies like Render)
+        const realIP = req.headers['x-forwarded-for']?.split(',')[0].trim() || 
+                       req.headers['x-real-ip'] || 
+                       req.ip || 
+                       req.connection.remoteAddress || 
+                       'Unknown';
+        
         // Log admin access
         if (useMongoDb) {
             await database.logAdminAccess('VIEW_ALL_USERS', {
-                ip: req.ip || req.connection.remoteAddress
+                ip: realIP
             });
         }
         
