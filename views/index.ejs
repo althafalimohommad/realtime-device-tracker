@@ -17,22 +17,14 @@
    <!-- Top Navigation Header -->
    <div class="top-nav">
        <div class="nav-left">
-           <img src="https://www.google.com/images/branding/product/2x/find_my_device_48dp.png" alt="Find Hub" class="app-logo">
-           <h1 class="app-title">Find Hub</h1>
-           <span class="app-domain">google.com</span>
+           <div style="display: flex; flex-direction: column; align-items: flex-start;">
+               <h1 class="app-title" style="margin: 0; font-size: 20px; font-weight: 500;">Realtime Device Tracker</h1>
+               <span class="app-domain" style="font-size: 12px; color: #5f6368; margin-top: 2px;">by Althaf</span>
+           </div>
        </div>
        <div class="nav-right">
-           <button class="icon-btn" title="Remote Lock">
-               <i class="material-icons">lock</i>
-           </button>
-           <button class="icon-btn" title="Notifications">
-               <i class="material-icons">notifications</i>
-           </button>
            <button class="icon-btn" title="Help">
                <i class="material-icons">help</i>
-           </button>
-           <button class="icon-btn" title="Apps">
-               <i class="material-icons">apps</i>
            </button>
            <img src="<%= user.photo %>" alt="<%= user.name %>" class="user-avatar">
        </div>
@@ -41,9 +33,6 @@
    <!-- Device Sidebar Panel -->
    <div id="device-sidebar" class="device-panel">
        <div class="panel-header">
-           <button class="icon-btn settings-btn" title="Settings">
-               <i class="material-icons">settings</i>
-           </button>
            <button class="icon-btn refresh-btn" onclick="refreshDevices()" title="Refresh">
                <i class="material-icons">refresh</i>
            </button>

@@ -908,18 +908,13 @@ function showDeviceDetails(deviceId) {
             </div>
         </div>
         <div class="device-actions-panel">
-            <button class="action-btn" onclick="playSound('${deviceId}')">
-                <i class="material-icons">volume_up</i>
-                <span class="action-btn-text">Play sound</span>
+            <button class="action-btn" onclick="copyLocation('${deviceId}')" style="background: #1a73e8; color: white; width: 100%;">
+                <i class="material-icons">content_copy</i>
+                <span class="action-btn-text">Copy Location</span>
             </button>
-            <button class="action-btn" onclick="secureDevice('${deviceId}')">
-                <i class="material-icons">lock</i>
-                <span class="action-btn-text">Secure device</span>
-            </button>
-            <button class="action-btn" onclick="factoryReset('${deviceId}')">
-                <i class="material-icons">settings_backup_restore</i>
-                <span class="action-btn-text">Factory reset device</span>
-            </button>
+            <p style="font-size: 12px; color: #5f6368; margin-top: 12px; text-align: center; padding: 0 16px;">
+                💡 Paste the copied coordinates in Google Maps to get the exact location of your device
+            </p>
         </div>
     `;
 }
@@ -936,20 +931,34 @@ function getTimeAgo(timestamp) {
     return `${days} day${days > 1 ? 's' : ''} ago`;
 }
 
-function playSound(deviceId) {
-    alertDevice(deviceId);
-}
-
-function secureDevice(deviceId) {
-    if (confirm('This will lock the device. Continue?')) {
-        showToast('Secure device feature coming soon');
+function copyLocation(deviceId) {
+    const device = devices.get(deviceId);
+    if (!device || device.latitude == null || device.longitude == null) {
+        showToast('❌ Location not available for this device');
+        return;
     }
-}
-
-function factoryReset(deviceId) {
-    if (confirm('WARNING: This will erase all data on the device. This action cannot be undone. Continue?')) {
-        showToast('Factory reset feature coming soon');
-    }
+    
+    const locationText = `${device.latitude}, ${device.longitude}`;
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(locationText).then(() => {
+        showToast('✅ Location copied! Paste in Google Maps to view');
+    }).catch(err => {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = locationText;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showToast('✅ Location copied! Paste in Google Maps to view');
+        } catch (err) {
+            showToast('❌ Failed to copy location');
+        }
+        document.body.removeChild(textArea);
+    });
 }
 
 function showToast(message) {
