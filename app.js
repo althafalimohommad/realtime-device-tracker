@@ -665,6 +665,23 @@ app.get('/api/admin/users', isAdmin, async function(req, res) {
     }
 });
 
+// Admin API - Get audit logs
+app.get('/api/admin/audit-logs', isAdmin, async function(req, res) {
+    try {
+        const limit = parseInt(req.query.limit) || 100;
+        const logs = await database.getAdminAuditLog(limit);
+        
+        res.json({
+            success: true,
+            logs: logs,
+            total: logs.length
+        });
+    } catch (error) {
+        console.error('Error fetching audit logs:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Public share route
 app.get('/share/:token', function(req, res) {
     const token = req.params.token;

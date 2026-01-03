@@ -357,6 +357,14 @@
             <h2>👥 Users & Devices</h2>
             <div id="user-list"></div>
         </div>
+
+        <div class="users-section" style="margin-top: 40px;">
+            <h2>📋 Admin Audit Log</h2>
+            <button class="refresh-btn" onclick="loadAuditLogs()" style="margin-bottom: 15px;">
+                Load Audit Logs
+            </button>
+            <div id="audit-log-container"></div>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -561,6 +569,73 @@
             document.getElementById('dashboard').style.display = 'none';
             document.getElementById('admin-password').value = '';
             document.getElementById('error-message').style.display = 'none';
+        }
+
+        async function loadAuditLogs() {
+            if (!adminToken) {
+                alert('Please login first');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/audit-logs?limit=50', {
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    alert('Failed to load audit logs');
+                    return;
+                }
+
+                const data = await response.json();
+                displayAuditLogs(data.logs);
+            } catch (error) {
+                alert('Error loading audit logs: ' + error.message);
+            }
+        }
+
+        function displayAuditLogs(logs) {
+            const container = document.getElementById('audit-log-container');
+            
+            if (!logs || logs.length === 0) {
+                container.innerHTML = '<p style="color: #5f6368; padding: 20px;">No audit logs found</p>';
+                return;
+            }
+
+            let html = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Action</th>
+                            <th>IP Address</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            logs.forEach(log => {
+                const date = new Date(log.timestamp);
+                html += `
+                    <tr>
+                        <td>${date.toLocaleString()}</td>
+                        <td>${log.action}</td>
+                        <td>${log.details?.ip || log.ip || 'Unknown'}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                    </tbody>
+                </table>
+                <p style="margin-top: 10px; color: #5f6368; font-size: 14px;">
+                    Showing last ${logs.length} access logs
+                </p>
+            `;
+
+            container.innerHTML = html;
         }
 
         // Auto-refresh every 30 seconds
