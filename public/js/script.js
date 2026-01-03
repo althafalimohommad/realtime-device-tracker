@@ -395,6 +395,8 @@ socket.on("devices-update", (devicesList) => {
             device.latitude = existingDevice.latitude;
             device.longitude = existingDevice.longitude;
         }
+        // Add lastSeen timestamp
+        device.lastSeen = Date.now();
         devices.set(device.id, device);
     });
     
@@ -407,6 +409,12 @@ socket.on("devices-update", (devicesList) => {
     });
     
     updateDeviceList();
+    
+    // Auto-select first device if none selected
+    if (!selectedDeviceId && devices.size > 0) {
+        const firstDeviceId = devices.keys().next().value;
+        selectDevice(firstDeviceId);
+    }
 });
 
 // Handle user disconnection
@@ -425,7 +433,9 @@ socket.on("play-alert", () => {
     showAlertNotification();
 });
 
-// Update device list UI
+// Update device list UI with Google Find Hub style
+let selectedDeviceId = null;
+
 function updateDeviceList() {
     const list = document.getElementById('device-list');
     list.innerHTML = '';
@@ -433,38 +443,220 @@ function updateDeviceList() {
     devices.forEach((device, id) => {
         const item = document.createElement('div');
         item.className = 'device-item';
+        if (id === selectedDeviceId) {
+            item.classList.add('selected');
+        }
         
-        // Battery display
-        const batteryHTML = device.battery !== null ? 
-            `<div class="battery-indicator ${device.charging ? 'charging' : ''}" style="color: ${device.battery > 50 ? '#10b981' : device.battery > 20 ? '#f59e0b' : '#ef4444'}">
-                ${device.charging ? '🔌' : device.battery > 20 ? '🔋' : '🪫'} ${device.battery}%
-            </div>` : '';
-        
-        // Device icon and type display
+        // Device icon
         const deviceIcon = device.deviceIcon || '📱';
-        const deviceType = device.deviceType || 'Unknown Device';
+        
+        // Time ago
+        const timeAgo = device.lastSeen ? getTimeAgo(device.lastSeen) : 'just now';
+        
+        // Battery info
+        const batteryPercent = device.battery !== null ? `${device.battery}%` : '';
         
         item.innerHTML = `
-            <div class="device-info">
-                <strong>${deviceIcon} ${device.name}</strong>
-                <small>${id === socket.id ? '(You)' : deviceType}</small>
-                ${batteryHTML}
+            <div class="device-icon">${deviceIcon}</div>
+            <div class="device-item-info">
+                <div class="device-item-name">${device.name}</div>
+                <div class="device-item-status">Last seen ${timeAgo}</div>
+                ${device.battery !== null ? `<div class="device-item-battery">${batteryPercent}</div>` : ''}
             </div>
-            ${id === socket.id ? `
-                <div class="device-actions">
-                    <button onclick="toggleShare()" class="share-btn" title="Share Location">
-                        ${device.isSharing ? '🔗 Stop Sharing' : '🔗 Share'}
-                    </button>
-                </div>
-            ` : `
-                <div class="device-actions">
-                    <button onclick="locateDevice('${id}')" title="Locate">📍</button>
-                    <button onclick="alertDevice('${id}')" title="Alert">🔔</button>
-                </div>
-            `}
         `;
+        
+        item.onclick = () => selectDevice(id);
         list.appendChild(item);
     });
+}
+
+function selectDevice(deviceId) {
+    selectedDeviceId = deviceId;
+    updateDeviceList();
+    showDeviceDetails(deviceId);
+    locateDevice(deviceId);
+}
+
+function showDeviceDetails(deviceId) {
+    const device = devices.get(deviceId);
+    if (!device) return;
+    
+    const detailsContainer = document.getElementById('device-details');
+    const deviceIcon = device.deviceIcon || '📱';
+    const timeAgo = device.lastSeen ? getTimeAgo(device.lastSeen) : 'just now';
+    const batteryIcon = device.charging ? 'battery_charging_full' : 'battery_std';
+    const networkInfo = device.deviceInfo?.connection || 'WiFi';
+    
+    detailsContainer.innerHTML = `
+        <div class="device-header">
+            <div style="font-size: 64px;">${deviceIcon}</div>
+            <div class="device-info-header">
+                <h2 class="device-name">${device.name}</h2>
+                <div class="device-status">
+                    <span>Last seen ${timeAgo}</span>
+                </div>
+                <div class="device-meta">
+                    ${device.battery !== null ? `
+                        <div class="battery-info">
+                            <i class="material-icons">${batteryIcon}</i>
+                            <span>${device.battery}%</span>
+                        </div>
+                    ` : ''}
+                    <div>${networkInfo}</div>
+                </div>
+            </div>
+        </div>
+        <div class="device-actions-panel">
+            <button class="action-btn" onclick="playSound('${deviceId}')">
+                <i class="material-icons">volume_up</i>
+                <span class="action-btn-text">Play sound</span>
+            </button>
+            <button class="action-btn" onclick="secureDevice('${deviceId}')">
+                <i class="material-icons">lock</i>
+                <span class="action-btn-text">Secure device</span>
+            </button>
+            <button class="action-btn" onclick="factoryReset('${deviceId}')">
+                <i class="material-icons">settings_backup_restore</i>
+                <span class="action-btn-text">Factory reset device</span>
+            </button>
+        </div>
+    `;
+}
+
+function getTimeAgo(timestamp) {
+    if (!timestamp) return 'just now';
+    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+    if (seconds < 60) return 'just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
+}
+
+function playSound(deviceId) {
+    alertDevice(deviceId);
+}
+
+function secureDevice(deviceId) {
+    if (confirm('This will lock the device. Continue?')) {
+        showToast('Secure device feature coming soon');
+    }
+}
+
+function factoryReset(deviceId) {
+    if (confirm('WARNING: This will erase all data on the device. This action cannot be undone. Continue?')) {
+        showToast('Factory reset feature coming soon');
+    }
+}
+
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+function showDevicesTab() {
+    document.querySelector('.devices-tab').classList.add('active');
+    document.querySelector('.people-tab').classList.remove('active');
+}
+
+function showPeopleTab() {
+    document.querySelector('.people-tab').classList.add('active');
+    document.querySelector('.devices-tab').classList.remove('active');
+    showToast('People sharing feature coming soon');
+}
+
+function refreshDevices() {
+    location.reload();
+}
+
+// Map type toggle
+document.addEventListener('DOMContentLoaded', () => {
+    const mapTypeBtns = document.querySelectorAll('.map-type-btn');
+    mapTypeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            mapTypeBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            if (btn.dataset.type === 'satellite') {
+                // Switch to satellite view
+                map.eachLayer(layer => {
+                    if (layer instanceof L.TileLayer) {
+                        map.removeLayer(layer);
+                    }
+                });
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: 'Esri, DigitalGlobe, GeoEye, Earthstar Geographics'
+                }).addTo(map);
+            } else {
+                // Switch to map view
+                map.eachLayer(layer => {
+                    if (layer instanceof L.TileLayer) {
+                        map.removeLayer(layer);
+                    }
+                });
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: 'OpenStreetMap'
+                }).addTo(map);
+            }
+        });
+    });
+    
+    // Mobile device panel dragging
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        const panel = document.getElementById('device-sidebar');
+        const panelHeader = panel.querySelector('.panel-header');
+        let startY = 0;
+        let currentY = 0;
+        let isDragging = false;
+        
+        panelHeader.addEventListener('touchstart', (e) => {
+            startY = e.touches[0].clientY;
+            isDragging = true;
+        });
+        
+        panelHeader.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            currentY = e.touches[0].clientY;
+            const deltaY = currentY - startY;
+            
+            if (deltaY > 50) {
+                panel.classList.add('minimized');
+            } else if (deltaY < -50) {
+                panel.classList.remove('minimized');
+            }
+        });
+        
+        panelHeader.addEventListener('touchend', () => {
+            isDragging = false;
+        });
+    }
+    
+    // Auto-detect device type and adjust UI
+    detectDeviceAndAdjustUI();
+});
+
+function detectDeviceAndAdjustUI() {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isTablet = /iPad|Android(?!.*Mobile)|Tablet/i.test(navigator.userAgent);
+    
+    if (isMobile && !isTablet) {
+        document.body.classList.add('mobile-device');
+        // Add minimize button behavior for mobile
+        const panel = document.getElementById('device-sidebar');
+        if (panel) {
+            panel.classList.add('minimized');
+        }
+    } else if (isTablet) {
+        document.body.classList.add('tablet-device');
+    } else {
+        document.body.classList.add('desktop-device');
+    }
 }
 
 // Locate device on map

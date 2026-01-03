@@ -1,478 +1,680 @@
+/* Google Find Hub UI - Responsive Design */
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
+:root {
+    --google-blue: #1a73e8;
+    --google-blue-hover: #1557b0;
+    --google-grey: #5f6368;
+    --google-border: #dadce0;
+    --google-bg: #f8f9fa;
+    --google-white: #ffffff;
+    --google-text: #202124;
+    --google-text-secondary: #5f6368;
+    --sidebar-width: 420px;
+    --header-height: 64px;
+}
+
 html, body {
     width: 100%;
     height: 100%;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    overflow: hidden;
+    background: var(--google-bg);
 }
 
-/* User Header */
-.user-header {
-    position: fixed;
-    top: 0;
-    right: 0;
-    background: white;
-    padding: 12px 24px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    z-index: 1001;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    border-bottom-left-radius: 12px;
-}
-
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.user-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 2px solid #667eea;
-}
-
-.user-name {
-    font-weight: 600;
-    color: #2d3748;
-}
-
-.encryption-badge {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    margin-left: 8px;
-    animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-}
-
-.logout-btn {
-    padding: 8px 16px;
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    color: white;
-    text-decoration: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.3s;
-}
-
-.logout-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
-}
-
-#map {
-    width: 100%;
-    height: 100%;
-    z-index: 1;
-}
-
-/* Device Sidebar */
-#device-sidebar {
+/* Top Navigation */
+.top-nav {
     position: fixed;
     top: 0;
     left: 0;
-    width: 320px;
-    height: 100vh;
-    background: white;
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    right: 0;
+    height: var(--header-height);
+    background: var(--google-white);
+    border-bottom: 1px solid var(--google-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
     z-index: 1000;
-    transition: transform 0.3s ease;
-    display: flex;
-    flex-direction: column;
 }
 
-#device-sidebar.collapsed {
-    transform: translateX(-280px);
-}
-
-.sidebar-header {
-    padding: 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+.nav-left {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 12px;
 }
 
-.sidebar-header h3 {
+.app-logo {
+    width: 40px;
+    height: 40px;
+}
+
+.app-title {
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--google-text);
     margin: 0;
-    font-size: 18px;
 }
 
-.toggle-btn {
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    color: white;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 16px;
-    transition: all 0.3s;
-}
-
-.toggle-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: scale(1.1);
-}
-
-#device-sidebar.collapsed .toggle-btn {
-    transform: rotate(180deg);
-}
-
-.sidebar-actions {
-    padding: 15px;
-    border-bottom: 1px solid #e0e0e0;
-}
-
-.btn-primary {
-    width: 100%;
-    padding: 10px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
+.app-domain {
     font-size: 14px;
-    font-weight: 500;
-    transition: all 0.3s;
+    color: var(--google-text-secondary);
+    margin-left: -8px;
 }
 
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.device-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 10px;
-}
-
-.device-item {
-    background: #f8f9fa;
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: all 0.3s;
-    border: 2px solid transparent;
-}
-
-.device-item:hover {
-    background: #e9ecef;
-    border-color: #667eea;
-    transform: translateX(5px);
-}
-
-.device-info {
-    flex: 1;
-}
-
-.device-info strong {
-    display: block;
-    color: #2d3748;
-    font-size: 15px;
-    margin-bottom: 4px;
-}
-
-.device-info small {
-    color: #667eea;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.battery-indicator {
-    font-size: 11px;
-    font-weight: 600;
-    margin-top: 4px;
+.nav-right {
     display: flex;
     align-items: center;
     gap: 4px;
 }
 
-.battery-indicator.charging {
-    animation: charging-pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes charging-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
-}
-
-.device-actions {
+.icon-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    border-radius: 50%;
+    cursor: pointer;
     display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    color: var(--google-grey);
+}
+
+.icon-btn:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.icon-btn .material-icons {
+    font-size: 20px;
+}
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-left: 8px;
+}
+
+/* Device Sidebar Panel */
+.device-panel {
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    width: var(--sidebar-width);
+    height: calc(100% - var(--header-height));
+    background: var(--google-white);
+    border-right: 1px solid var(--google-border);
+    display: flex;
+    flex-direction: column;
+    z-index: 999;
+    transition: transform 0.3s ease;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--google-border);
+}
+
+.settings-btn .material-icons,
+.refresh-btn .material-icons {
+    font-size: 24px;
+}
+
+/* Device Details Section */
+.device-details {
+    padding: 24px;
+    border-bottom: 1px solid var(--google-border);
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+}
+
+.no-device-selected {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    color: var(--google-text-secondary);
+    text-align: center;
+}
+
+.no-device-selected .material-icons {
+    font-size: 48px;
+    color: var(--google-border);
+    margin-bottom: 12px;
+}
+
+.device-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.device-image {
+    width: 80px;
+    height: auto;
+    border-radius: 8px;
+}
+
+.device-info-header {
+    flex: 1;
+}
+
+.device-name {
+    font-size: 24px;
+    font-weight: 400;
+    color: var(--google-text);
+    margin: 0 0 4px 0;
+}
+
+.device-status {
+    font-size: 14px;
+    color: var(--google-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.device-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--google-text-secondary);
+}
+
+.battery-info {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.battery-info .material-icons {
+    font-size: 18px;
+}
+
+.device-actions-panel {
+    display: flex;
+    flex-direction: column;
     gap: 8px;
 }
 
-.device-actions button {
-    width: 36px;
-    height: 36px;
-    border: none;
-    background: white;
-    border-radius: 50%;
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: var(--google-white);
+    border: 1px solid var(--google-border);
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 16px;
-    transition: all 0.3s;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--google-text);
 }
 
-.device-actions button:hover {
-    transform: scale(1.15);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.action-btn:hover {
+    background: var(--google-bg);
+    box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
 }
 
-.device-actions button:active {
-    transform: scale(0.95);
+.action-btn .material-icons {
+    font-size: 24px;
+    color: var(--google-grey);
 }
 
-.current-device {
-    color: #667eea;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 8px 12px;
-    background: rgba(102, 126, 234, 0.1);
-    border-radius: 20px;
+.action-btn-text {
+    flex: 1;
+    text-align: left;
 }
 
-/* Alert Notification */
-.alert-notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    color: white;
-    padding: 16px 24px;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    z-index: 2000;
+/* Sidebar Tabs */
+.sidebar-header {
+    display: flex;
+    border-bottom: 1px solid var(--google-border);
+}
+
+.devices-tab,
+.people-tab {
+    flex: 1;
+    height: 48px;
+    border: none;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
     font-weight: 500;
-    animation: slideIn 0.5s ease;
+    color: var(--google-text-secondary);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    font-family: inherit;
+    width: auto;
 }
 
-@keyframes slideIn {
-    from {
-        transform: translateX(400px);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+.devices-tab:hover,
+.people-tab:hover {
+    background: rgba(0, 0, 0, 0.04);
 }
 
-@keyframes fadeOut {
-    to {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
+.devices-tab.active,
+.people-tab.active {
+    color: var(--google-blue);
+    border-bottom-color: var(--google-blue);
+}
+
+.devices-tab .material-icons,
+.people-tab .material-icons {
+    font-size: 20px;
+}
+
+/* Device List */
+.device-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.device-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-bottom: 4px;
+}
+
+.device-item:hover {
+    background: var(--google-bg);
+}
+
+.device-item.selected {
+    background: #e8f0fe;
+}
+
+.device-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+.device-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.device-item-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--google-text);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.device-item-status {
+    font-size: 12px;
+    color: var(--google-text-secondary);
+}
+
+.device-item-battery {
+    font-size: 12px;
+    color: var(--google-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Map Container */
+#map {
+    position: fixed;
+    top: var(--header-height);
+    left: var(--sidebar-width);
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+}
+
+/* Map Controls */
+.map-controls {
+    position: fixed;
+    top: calc(var(--header-height) + 20px);
+    right: 20px;
+    background: var(--google-white);
+    border-radius: 8px;
+    box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 2px 6px 2px rgba(60, 64, 67, 0.15);
+    display: flex;
+    z-index: 998;
+    overflow: hidden;
+}
+
+.map-type-btn {
+    padding: 10px 16px;
+    border: none;
+    background: var(--google-white);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--google-text);
+    font-family: inherit;
+    transition: background 0.2s;
+}
+
+.map-type-btn:hover {
+    background: var(--google-bg);
+}
+
+.map-type-btn.active {
+    background: var(--google-blue);
+    color: var(--google-white);
+}
+
+.map-type-btn:not(:last-child) {
+    border-right: 1px solid var(--google-border);
 }
 
 /* Scrollbar Styling */
 .device-list::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
 }
 
 .device-list::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
+    background: transparent;
 }
 
 .device-list::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 10px;
+    background: var(--google-border);
+    border-radius: 4px;
 }
 
 .device-list::-webkit-scrollbar-thumb:hover {
-    background: #764ba2;
+    background: var(--google-grey);
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-    #device-sidebar {
-        width: 100%;
-    }
-    
-    #device-sidebar.collapsed {
-        transform: translateX(-100%);
-    }
-}
-
-/* Leaflet Popup Styling */
+/* Leaflet Custom Styles */
 .leaflet-popup-content-wrapper {
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    padding: 0;
 }
 
 .leaflet-popup-content {
     margin: 16px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-}
-
-.leaflet-popup-content b {
-    color: #667eea;
-    font-size: 16px;
-}
-
-/* Device Popup Styling */
-.device-popup {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    min-width: 200px;
-}
-
-.popup-info {
-    margin-top: 8px;
-    font-size: 13px;
-    line-height: 1.6;
-    color: #4a5568;
-}
-
-/* Share Modal Styling */
-.share-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000;
-    animation: fadeIn 0.3s;
-}
-
-.share-modal-content {
-    background: white;
-    padding: 30px;
-    border-radius: 20px;
-    max-width: 500px;
-    width: 90%;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    animation: slideUp 0.3s;
-}
-
-.share-modal-content h3 {
-    margin: 0 0 20px 0;
-    color: #2d3748;
-    font-size: 24px;
-}
-
-.share-modal-content p {
-    color: #4a5568;
-    margin-bottom: 15px;
-}
-
-.share-link-container {
-    display: flex;
-    gap: 10px;
-    margin: 20px 0;
-}
-
-.share-link-input {
-    flex: 1;
-    padding: 12px 16px;
-    border: 2px solid #e2e8f0;
-    border-radius: 10px;
+    font-family: 'Google Sans', 'Roboto', sans-serif;
     font-size: 14px;
-    font-family: monospace;
-    background: #f7fafc;
 }
 
-.copy-btn {
-    padding: 12px 24px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: transform 0.2s;
+/* ============================================
+   MOBILE RESPONSIVE DESIGN (< 768px)
+   ============================================ */
+
+@media (max-width: 768px) {
+    :root {
+        --sidebar-width: 100%;
+        --header-height: 56px;
+    }
+
+    /* Mobile Top Nav */
+    .top-nav {
+        height: var(--header-height);
+        padding: 0 8px;
+    }
+
+    .app-logo {
+        width: 32px;
+        height: 32px;
+    }
+
+    .app-title {
+        font-size: 18px;
+    }
+
+    .app-domain {
+        display: none;
+    }
+
+    .icon-btn {
+        width: 48px;
+        height: 48px;
+    }
+
+    .nav-right .icon-btn:nth-child(1),
+    .nav-right .icon-btn:nth-child(2),
+    .nav-right .icon-btn:nth-child(4) {
+        display: none; /* Hide some icons on mobile */
+    }
+
+    /* Mobile Device Panel */
+    .device-panel {
+        width: 100%;
+        top: auto;
+        bottom: 0;
+        height: auto;
+        max-height: 70vh;
+        border-right: none;
+        border-top: 1px solid var(--google-border);
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .device-panel.minimized {
+        max-height: 200px;
+    }
+
+    .panel-header {
+        position: relative;
+        padding: 8px 16px;
+    }
+
+    .panel-header::before {
+        content: '';
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 32px;
+        height: 4px;
+        background: var(--google-border);
+        border-radius: 2px;
+    }
+
+    /* Mobile Device Details */
+    .device-details {
+        padding: 16px;
+        min-height: auto;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .device-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .device-image {
+        width: 60px;
+    }
+
+    .device-name {
+        font-size: 20px;
+    }
+
+    .device-meta {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .device-actions-panel {
+        margin-top: 16px;
+    }
+
+    .action-btn {
+        padding: 14px;
+    }
+
+    /* Mobile Tabs */
+    .sidebar-header {
+        display: none; /* Hide tabs on mobile by default, show when expanded */
+    }
+
+    .device-panel:not(.minimized) .sidebar-header {
+        display: flex;
+    }
+
+    /* Mobile Device List */
+    .device-list {
+        max-height: 200px;
+        padding: 4px;
+    }
+
+    .device-item {
+        padding: 10px;
+    }
+
+    /* Mobile Map */
+    #map {
+        top: var(--header-height);
+        left: 0;
+        right: 0;
+        bottom: 0;
+    }
+
+    /* Mobile Map Controls */
+    .map-controls {
+        top: calc(var(--header-height) + 12px);
+        right: 12px;
+        left: auto;
+        transform: scale(0.9);
+        transform-origin: top right;
+    }
+
+    .map-type-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    /* Fullscreen toggle button */
+    .expand-btn {
+        display: block;
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 32px;
+        height: 32px;
+        border-radius: 4px;
+        background: var(--google-bg);
+        border: none;
+        cursor: pointer;
+    }
+
+    .expand-btn .material-icons {
+        font-size: 20px;
+        color: var(--google-grey);
+    }
 }
 
-.copy-btn:hover {
-    transform: scale(1.05);
+/* Tablet View (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+    :root {
+        --sidebar-width: 360px;
+    }
+
+    .app-domain {
+        display: none;
+    }
+
+    .device-details {
+        padding: 20px;
+        min-height: 250px;
+    }
 }
 
-.share-warning {
-    background: #fff3cd;
-    border: 1px solid #ffc107;
-    padding: 12px;
-    border-radius: 10px;
-    font-size: 13px;
-    color: #856404;
-    margin: 15px 0;
+/* Small Mobile (< 380px) */
+@media (max-width: 380px) {
+    .app-title {
+        font-size: 16px;
+    }
+
+    .device-name {
+        font-size: 18px;
+    }
+
+    .device-actions-panel {
+        gap: 6px;
+    }
+
+    .action-btn {
+        padding: 12px;
+        font-size: 13px;
+    }
 }
 
-.share-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    margin-top: 20px;
+/* Landscape Mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+    .device-panel {
+        max-height: 85vh;
+    }
+
+    .device-details {
+        max-height: 200px;
+    }
+
+    .device-list {
+        max-height: 150px;
+    }
 }
 
-.btn-secondary {
-    padding: 10px 20px;
-    background: #e2e8f0;
-    color: #2d3748;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: background 0.2s;
+/* Dark Mode Support (Optional) */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --google-bg: #202124;
+        --google-white: #292a2d;
+        --google-text: #e8eaed;
+        --google-text-secondary: #9aa0a6;
+        --google-border: #5f6368;
+    }
+
+    .top-nav,
+    .device-panel,
+    .map-controls {
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
 }
 
-.btn-secondary:hover {
-    background: #cbd5e0;
-}
-
-.btn-danger {
-    padding: 10px 20px;
-    background: #ef4444;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: background 0.2s;
-}
-
-.btn-danger:hover {
-    background: #dc2626;
-}
-
-.share-btn {
-    padding: 8px 12px;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 600;
-    transition: transform 0.2s;
-    white-space: nowrap;
-}
-
-.share-btn:hover {
-    transform: scale(1.05);
+/* Animations */
+@keyframes slideIn {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 @keyframes fadeIn {
@@ -484,13 +686,57 @@ html, body {
     }
 }
 
-@keyframes slideUp {
-    from {
-        transform: translateY(50px);
-        opacity: 0;
-    }
+.device-panel {
+    animation: slideIn 0.3s ease-out;
+}
+
+/* Loading States */
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: var(--google-text-secondary);
+}
+
+.loading::after {
+    content: '';
+    width: 20px;
+    height: 20px;
+    margin-left: 8px;
+    border: 2px solid var(--google-border);
+    border-top-color: var(--google-blue);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
     to {
-        transform: translateY(0);
-        opacity: 1;
+        transform: rotate(360deg);
+    }
+}
+
+/* Alert/Toast Notifications */
+.toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #323232;
+    color: white;
+    padding: 14px 24px;
+    border-radius: 4px;
+    font-size: 14px;
+    z-index: 10000;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    animation: fadeIn 0.3s;
+}
+
+@media (max-width: 768px) {
+    .toast {
+        bottom: 84px;
+        left: 16px;
+        right: 16px;
+        transform: none;
     }
 }
