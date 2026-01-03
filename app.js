@@ -9,6 +9,7 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const fs = require('fs');
 const crypto = require('crypto');
+const database = require('./database');
 
 const server = http.createServer(app);
 const io = socketio(server);
@@ -16,17 +17,49 @@ const io = socketio(server);
 // Store for sharing tokens (token -> {socketId, userId, expiresAt})
 const shareTokens = new Map();
 
-// User storage file
+// User storage file (fallback)
 const USERS_FILE = path.join(__dirname, 'users.json');
 
-// Load or create users database
+// In-memory user cache
 let usersDB = {};
-if (fs.existsSync(USERS_FILE)) {
-    usersDB = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+let useMongoDb = false;
+
+// Initialize database connection
+async function initializeDatabase() {
+    useMongoDb = await database.connect();
+    
+    if (useMongoDb) {
+        // Load users from MongoDB
+        usersDB = await database.getAllUsers();
+        console.log('📊 Loaded users from MongoDB');
+    } else {
+        // Fallback to file storage
+        if (fs.existsSync(USERS_FILE)) {
+            usersDB = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+        }
+        console.log('📁 Using local file storage');
+    }
 }
 
-function saveUsers() {
-    fs.writeFileSync(USERS_FILE, JSON.stringify(usersDB, null, 2));
+// Save users to database or file
+async function saveUsers() {
+    if (useMongoDb) {
+        // Users are saved individually in MongoDB, no need for batch save
+        return;
+    } else {
+        // Fallback to file storage
+        fs.writeFileSync(USERS_FILE, JSON.stringify(usersDB, null, 2));
+    }
+}
+
+// Save individual user
+async function saveUser(user) {
+    usersDB[user.id] = user;
+    if (useMongoDb) {
+        await database.saveUser(user);
+    } else {
+        saveUsers();
+    }
 }
 
 // Passport configuration
@@ -34,29 +67,54 @@ passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: process.env.CALLBACK_URL
-}, (accessToken, refreshToken, profile, done) => {
+}, async (accessToken, refreshToken, profile, done) => {
     // Store user in database
     const userId = profile.id;
-    if (!usersDB[userId]) {
-        usersDB[userId] = {
-            id: userId,
-            email: profile.emails[0].value,
-            name: profile.displayName,
-            photo: profile.photos[0].value,
-            devices: [],
-            registeredDevices: []
-        };
-        saveUsers();
+    
+    // Check if user exists in cache or database
+    let user = usersDB[userId];
+    
+    if (!user) {
+        // Try to load from database
+        if (useMongoDb) {
+            user = await database.getUser(userId);
+        }
+        
+        // Create new user if not found
+        if (!user) {
+            user = {
+                id: userId,
+                email: profile.emails[0].value,
+                name: profile.displayName,
+                photo: profile.photos[0].value,
+                devices: [],
+                registeredDevices: []
+            };
+        }
+        
+        // Save to database
+        await saveUser(user);
     }
-    return done(null, usersDB[userId]);
+    
+    return done(null, user);
 }));
 
 passport.serializeUser((user, done) => {
     done(null, user.id);
 });
 
-passport.deserializeUser((id, done) => {
-    done(null, usersDB[id]);
+passport.deserializeUser(async (id, done) => {
+    let user = usersDB[id];
+    
+    // If not in cache and using MongoDB, fetch from database
+    if (!user && useMongoDb) {
+        user = await database.getUser(id);
+        if (user) {
+            usersDB[id] = user; // Cache it
+        }
+    }
+    
+    done(null, user);
 });
 
 // Middleware
@@ -116,7 +174,7 @@ io.on("connection", function(socket) {
         if (data.isRegistered && data.userId && usersDB[data.userId]) {
             if (!usersDB[data.userId].devices.includes(data.name)) {
                 usersDB[data.userId].devices.push(data.name);
-                saveUsers();
+                await saveUser(usersDB[data.userId]);
             }
         }
         
@@ -292,7 +350,7 @@ app.get('/api/user', isAuthenticated, function(req, res) {
 });
 
 // API endpoint to register a device
-app.post('/api/register-device', isAuthenticated, function(req, res) {
+app.post('/api/register-device', isAuthenticated, async function(req, res) {
     try {
         const userId = req.user.id;
         const { deviceName, deviceType, deviceModel, platform, browser, deviceIcon } = req.body;
@@ -311,13 +369,26 @@ app.post('/api/register-device', isAuthenticated, function(req, res) {
             fingerprint: req.headers['user-agent'] // Basic fingerprinting
         };
         
+        // Get user from cache or database
+        let user = usersDB[userId];
+        if (!user && useMongoDb) {
+            user = await database.getUser(userId);
+            if (user) {
+                usersDB[userId] = user;
+            }
+        }
+        
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        
         // Initialize registeredDevices array if it doesn't exist
-        if (!usersDB[userId].registeredDevices) {
-            usersDB[userId].registeredDevices = [];
+        if (!user.registeredDevices) {
+            user.registeredDevices = [];
         }
         
         // Check if this device is already registered (by fingerprint)
-        const existingDevice = usersDB[userId].registeredDevices.find(
+        const existingDevice = user.registeredDevices.find(
             d => d.fingerprint === deviceRegistration.fingerprint
         );
         
@@ -329,10 +400,11 @@ app.post('/api/register-device', isAuthenticated, function(req, res) {
             existingDevice.lastUpdated = new Date().toISOString();
         } else {
             // Add new device
-            usersDB[userId].registeredDevices.push(deviceRegistration);
+            user.registeredDevices.push(deviceRegistration);
         }
         
-        saveUsers();
+        // Save to database
+        await saveUser(user);
         
         res.json({ 
             success: true, 
@@ -393,4 +465,14 @@ app.get('/api/share/:token', function(req, res) {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
+
+// Initialize database and start server
+initializeDatabase().then(() => {
+    server.listen(PORT, () => {
+        console.log(`🚀 Server listening on port ${PORT}`);
+        console.log(`📊 Database: ${useMongoDb ? 'MongoDB Atlas (Cloud)' : 'Local File Storage'}`);
+    });
+}).catch(error => {
+    console.error('Failed to initialize database:', error);
+    process.exit(1);
+});

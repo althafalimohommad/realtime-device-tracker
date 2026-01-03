@@ -17,3 +17,5 @@ services:
         value: https://realtime-device-tracker.onrender.com/auth/google/callback
       - key: NODE_ENV
         value: production
+      - key: MONGODB_URI
+        sync: false
