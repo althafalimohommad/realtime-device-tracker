@@ -236,6 +236,75 @@
         .logout-btn:hover {
             background: #c5221f;
         }
+
+        /* Table Styles */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .data-table thead {
+            background: #f8f9fa;
+        }
+
+        .data-table th {
+            padding: 16px;
+            text-align: left;
+            font-size: 14px;
+            font-weight: 500;
+            color: #5f6368;
+            border-bottom: 2px solid #dadce0;
+        }
+
+        .data-table td {
+            padding: 16px;
+            border-bottom: 1px solid #f1f3f4;
+            vertical-align: middle;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .user-photo {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .device-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .device-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+
+        .device-list li:last-child {
+            border-bottom: none;
+        }
+
+        .location-link {
+            color: #1a73e8;
+            text-decoration: none;
+            font-size: 12px;
+        }
+
+        .location-link:hover {
+            text-decoration: underline;
+        }
+
+        .no-data {
+            color: #5f6368;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -358,34 +427,88 @@
                 return;
             }
 
-            container.innerHTML = users.map(user => `
-                <div class="user-card">
-                    <div class="user-header">
-                        <img src="${user.photo}" alt="${user.name}">
-                        <div class="user-info">
-                            <h3>${user.name}</h3>
-                            <p>${user.email}</p>
-                            <small style="color: #1a73e8;">${user.devices.length} device(s) registered</small>
-                        </div>
-                    </div>
-                    ${user.devices.length > 0 ? `
-                        <div class="device-grid">
-                            ${user.devices.map(device => `
-                                <div class="device-card">
-                                    <strong>${device.icon} ${device.name}</strong>
-                                    <small>Type: ${device.type || 'Unknown'}</small>
-                                    <small>Model: ${device.model || 'Unknown'}</small>
-                                    ${device.latitude && device.longitude ? `
-                                        <small style="color: #10b981;">📍 ${device.latitude.toFixed(5)}, ${device.longitude.toFixed(5)}</small>
-                                        <small>Updated: ${new Date(device.lastLocationUpdate).toLocaleString()}</small>
-                                    ` : '<small style="color: #ea4335;">No location data</small>'}
-                                    <small>Registered: ${new Date(device.registeredAt).toLocaleDateString()}</small>
+            let tableHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>S.No</th>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Devices</th>
+                            <th>Registered Date</th>
+                            <th>Unregistered Date</th>
+                            <th>Location</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            users.forEach((user, index) => {
+                if (user.devices.length === 0) {
+                    // User with no devices
+                    tableHTML += `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <img src="${user.photo}" alt="${user.name}" class="user-photo">
+                                    <span>${user.name}</span>
                                 </div>
-                            `).join('')}
-                        </div>
-                    ` : '<p style="color: #5f6368; margin-top: 8px;">No devices registered</p>'}
-                </div>
-            `).join('');
+                            </td>
+                            <td>${user.email}</td>
+                            <td><span style="color: #5f6368;">No devices</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    `;
+                } else {
+                    // User with devices - one row per device
+                    user.devices.forEach((device, deviceIndex) => {
+                        tableHTML += `
+                            <tr>
+                                <td>${deviceIndex === 0 ? index + 1 : ''}</td>
+                                <td>
+                                    ${deviceIndex === 0 ? `
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <img src="${user.photo}" alt="${user.name}" class="user-photo">
+                                            <span>${user.name}</span>
+                                        </div>
+                                    ` : ''}
+                                </td>
+                                <td>${deviceIndex === 0 ? user.email : ''}</td>
+                                <td>
+                                    <div class="device-list">
+                                        <div><strong>${device.icon} ${device.name}</strong></div>
+                                        <div style="font-size: 12px; color: #5f6368;">${device.type || 'Unknown'} - ${device.model || 'Unknown'}</div>
+                                    </div>
+                                </td>
+                                <td>${new Date(device.registeredAt).toLocaleDateString()}</td>
+                                <td>${device.unregisteredAt ? new Date(device.unregisteredAt).toLocaleDateString() : '-'}</td>
+                                <td>
+                                    ${device.latitude && device.longitude ? `
+                                        <a href="https://www.google.com/maps?q=${device.latitude},${device.longitude}" 
+                                           target="_blank" 
+                                           class="location-link">
+                                            📍 ${device.latitude.toFixed(5)}, ${device.longitude.toFixed(5)}
+                                        </a>
+                                        <div style="font-size: 11px; color: #5f6368; margin-top: 4px;">
+                                            ${new Date(device.lastLocationUpdate).toLocaleString()}
+                                        </div>
+                                    ` : '<span style="color: #ea4335;">No location</span>'}
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+            });
+
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = tableHTML;
         }
 
         function initMap() {
