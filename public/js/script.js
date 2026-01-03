@@ -563,7 +563,7 @@ socket.on("receive-location", async (data) => {
                 <div class="device-popup">
                     <b>${name}</b> 🔐<br>
                     <div class="popup-info">
-                        📍 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}<br>
+                        <a href="https://www.google.com/maps?q=${latitude},${longitude}" target="_blank" style="color: #1a73e8; text-decoration: none;">📍 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}</a><br>
                         ${battery !== null ? `${batteryDisplay}${charging ? ' (Charging)' : ''}<br>` : ''}
                         ${accuracy ? `📏 Accuracy: ±${Math.round(accuracy)}m<br>` : ''}
                         ${speed && speed > 0 ? `🚗 Speed: ${(speed * 3.6).toFixed(1)} km/h<br>` : ''}
@@ -585,7 +585,7 @@ socket.on("receive-location", async (data) => {
                 <div class="device-popup">
                     <b>${name}</b> 🔐<br>
                     <div class="popup-info">
-                        📍 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}<br>
+                        <a href="https://www.google.com/maps?q=${latitude},${longitude}" target="_blank" style="color: #1a73e8; text-decoration: none;">📍 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}</a><br>
                         ${battery !== null ? `${batteryDisplay}${charging ? ' (Charging)' : ''}<br>` : ''}
                         ${accuracy ? `📏 Accuracy: ±${Math.round(accuracy)}m<br>` : ''}
                         ${speed && speed > 0 ? `🚗 Speed: ${(speed * 3.6).toFixed(1)} km/h<br>` : ''}
@@ -834,7 +834,7 @@ function addOrUpdateMarker(deviceId, locationData) {
             <div class="device-popup">
                 <b>${name}</b><br>
                 <div class="popup-info">
-                    📍 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}<br>
+                    <a href="https://www.google.com/maps?q=${latitude},${longitude}" target="_blank" style="color: #1a73e8; text-decoration: none;">📍 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}</a><br>
                     ${battery !== null ? `${batteryDisplay}${charging ? ' (Charging)' : ''}<br>` : ''}
                     ${accuracy ? `📏 Accuracy: ±${Math.round(accuracy)}m<br>` : ''}
                     ⏰ ${timeAgo}
@@ -855,7 +855,7 @@ function addOrUpdateMarker(deviceId, locationData) {
             <div class="device-popup">
                 <b>${name}</b><br>
                 <div class="popup-info">
-                    📍 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}<br>
+                    <a href="https://www.google.com/maps?q=${latitude},${longitude}" target="_blank" style="color: #1a73e8; text-decoration: none;">📍 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}</a><br>
                     ${battery !== null ? `${batteryDisplay}${charging ? ' (Charging)' : ''}<br>` : ''}
                     ${accuracy ? `📏 Accuracy: ±${Math.round(accuracy)}m<br>` : ''}
                     ⏰ ${timeAgo}
