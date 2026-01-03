@@ -474,6 +474,61 @@ app.post('/api/register-device', isAuthenticated, async function(req, res) {
     }
 });
 
+// Admin middleware
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+
+function isAdmin(req, res, next) {
+    const auth = req.headers.authorization;
+    if (auth && auth.startsWith('Bearer ')) {
+        const token = auth.substring(7);
+        if (token === ADMIN_PASSWORD) {
+            return next();
+        }
+    }
+    res.status(401).json({ error: 'Unauthorized' });
+}
+
+// Admin dashboard page
+app.get('/admin', function(req, res) {
+    res.render('admin');
+});
+
+// Admin API - Get all users and devices
+app.get('/api/admin/users', isAdmin, async function(req, res) {
+    try {
+        const allUsers = await database.getAllUsersArray();
+        
+        const stats = {
+            totalUsers: allUsers.length,
+            totalDevices: allUsers.reduce((sum, user) => {
+                return sum + (user.registeredDevices?.length || 0);
+            }, 0),
+            users: allUsers.map(user => ({
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                photo: user.photo,
+                devices: (user.registeredDevices || []).map(device => ({
+                    id: device.id,
+                    name: device.name,
+                    icon: device.icon || '📱',
+                    type: device.type,
+                    model: device.model,
+                    latitude: device.latitude,
+                    longitude: device.longitude,
+                    lastLocationUpdate: device.lastLocationUpdate,
+                    registeredAt: device.registeredAt
+                }))
+            }))
+        };
+        
+        res.json(stats);
+    } catch (error) {
+        console.error('Admin API error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Public share route
 app.get('/share/:token', function(req, res) {
     const token = req.params.token;

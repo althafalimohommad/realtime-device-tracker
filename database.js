@@ -73,6 +73,16 @@ class Database {
         }
     }
 
+    async getAllUsersArray() {
+        if (!this.usersCollection) return [];
+        try {
+            return await this.usersCollection.find({}).toArray();
+        } catch (error) {
+            console.error('Error fetching all users array:', error);
+            return [];
+        }
+    }
+
     async updateUserDevices(userId, devices) {
         if (!this.usersCollection) return false;
         try {
