@@ -173,6 +173,9 @@ async function initializeDevice() {
             async (position) => {
                 const { latitude, longitude, accuracy, altitude, speed, heading } = position.coords;
                 
+                // Log accuracy for debugging
+                console.log(`📍 Location update - Accuracy: ${accuracy}m, Lat: ${latitude}, Lng: ${longitude}`);
+                
                 // Get current device info
                 const deviceInfo = await getDeviceInfo();
                 
@@ -209,15 +212,29 @@ async function initializeDevice() {
                 socket.emit("send-location", locationData);
             },
             (error) => {
-                console.error(error);
-                alert("Location access denied. Please enable location services.");
+                console.error('Geolocation error:', error);
+                let errorMsg = "Location access error. ";
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMsg += "Please allow location access in your browser settings.";
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMsg += "Location information unavailable. Make sure GPS is enabled.";
+                        break;
+                    case error.TIMEOUT:
+                        errorMsg += "Location request timed out. Trying again...";
+                        break;
+                }
+                console.warn(errorMsg);
             },
             {
                 enableHighAccuracy: true,
-                timeout: 5000,
+                timeout: 10000,
                 maximumAge: 0,
             }
         );
+    } else {
+        alert("Geolocation is not supported by your browser.");
     }
 }
 
@@ -322,10 +339,25 @@ socket.on("receive-location", async (data) => {
 
 // Handle devices update
 socket.on("devices-update", (devicesList) => {
-    devices.clear();
+    console.log('Devices update received:', devicesList);
     devicesList.forEach(device => {
+        // Preserve location data if device already exists
+        const existingDevice = devices.get(device.id);
+        if (existingDevice && existingDevice.latitude && existingDevice.longitude) {
+            device.latitude = existingDevice.latitude;
+            device.longitude = existingDevice.longitude;
+        }
         devices.set(device.id, device);
     });
+    
+    // Remove devices that are no longer in the list
+    const deviceIds = new Set(devicesList.map(d => d.id));
+    devices.forEach((device, id) => {
+        if (!deviceIds.has(id)) {
+            devices.delete(id);
+        }
+    });
+    
     updateDeviceList();
 });
 
@@ -390,13 +422,17 @@ function updateDeviceList() {
 // Locate device on map
 function locateDevice(deviceId) {
     const device = devices.get(deviceId);
+    console.log('Locating device:', deviceId, device);
+    
     if (device && device.latitude && device.longitude) {
+        console.log(`Zooming to: ${device.latitude}, ${device.longitude}`);
         map.setView([device.latitude, device.longitude], 18);
         if (markers[deviceId]) {
             markers[deviceId].openPopup();
         }
     } else {
-        alert("Location not available for this device");
+        console.warn('Device location not available:', device);
+        alert("Location not available for this device. The device may be offline or location tracking may be disabled.");
     }
 }
 
