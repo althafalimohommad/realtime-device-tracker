@@ -527,6 +527,77 @@ app.post('/api/unregister-device', isAuthenticated, async function(req, res) {
     }
 });
 
+// Delete user account endpoint
+app.post('/api/delete-account', isAuthenticated, async function(req, res) {
+    try {
+        const userId = req.user.id;
+        
+        // Delete from database
+        if (useMongoDb) {
+            await database.deleteUser(userId);
+        }
+        
+        // Remove from cache
+        delete usersDB[userId];
+        
+        // Logout user
+        req.logout(function(err) {
+            if (err) {
+                console.error('Logout error:', err);
+            }
+        });
+        
+        console.log(`✅ Account deleted for user: ${userId}`);
+        
+        res.json({ 
+            success: true, 
+            message: 'Account deleted successfully'
+        });
+    } catch (error) {
+        console.error('Error deleting account:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Clear location history endpoint
+app.post('/api/clear-location-history', isAuthenticated, async function(req, res) {
+    try {
+        const userId = req.user.id;
+        
+        // Clear location history in database
+        if (useMongoDb) {
+            await database.clearUserLocationHistory(userId);
+        }
+        
+        // Update cache
+        let user = usersDB[userId];
+        if (!user && useMongoDb) {
+            user = await database.getUser(userId);
+        }
+        
+        if (user && user.registeredDevices) {
+            user.registeredDevices = user.registeredDevices.map(device => ({
+                ...device,
+                latitude: null,
+                longitude: null,
+                accuracy: null,
+                lastLocationUpdate: null
+            }));
+            usersDB[userId] = user;
+        }
+        
+        console.log(`✅ Location history cleared for user: ${userId}`);
+        
+        res.json({ 
+            success: true, 
+            message: 'Location history cleared successfully'
+        });
+    } catch (error) {
+        console.error('Error clearing location history:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // Admin middleware
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
@@ -541,6 +612,11 @@ function isAdmin(req, res, next) {
     res.status(401).json({ error: 'Unauthorized' });
 }
 
+// Privacy policy page
+app.get('/privacy', function(req, res) {
+    res.render('privacy');
+});
+
 // Admin dashboard page
 app.get('/admin', function(req, res) {
     res.render('admin');
@@ -549,6 +625,13 @@ app.get('/admin', function(req, res) {
 // Admin API - Get all users and devices
 app.get('/api/admin/users', isAdmin, async function(req, res) {
     try {
+        // Log admin access
+        if (useMongoDb) {
+            await database.logAdminAccess('VIEW_ALL_USERS', {
+                ip: req.ip || req.connection.remoteAddress
+            });
+        }
+        
         const allUsers = await database.getAllUsersArray();
         
         const stats = {
@@ -630,6 +713,28 @@ app.get('/api/share/:token', function(req, res) {
 });
 
 const PORT = process.env.PORT || 3000;
+
+// Auto-delete old location data daily (runs every 24 hours)
+if (useMongoDb) {
+    setInterval(async () => {
+        try {
+            const deletedCount = await database.deleteOldLocationData(30);
+            console.log(`🗑️  Auto-cleanup: Removed ${deletedCount} old location records`);
+        } catch (error) {
+            console.error('Error in auto-cleanup:', error);
+        }
+    }, 24 * 60 * 60 * 1000); // 24 hours
+
+    // Run once on startup
+    setTimeout(async () => {
+        try {
+            const deletedCount = await database.deleteOldLocationData(30);
+            console.log(`🗑️  Initial cleanup: Removed ${deletedCount} old location records`);
+        } catch (error) {
+            console.error('Error in initial cleanup:', error);
+        }
+    }, 10000); // Wait 10 seconds after startup
+}
 
 // Initialize database and start server
 initializeDatabase().then(() => {

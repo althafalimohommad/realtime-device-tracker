@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - Realtime Device Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+
+        .last-updated {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #667eea;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+
+        p, li {
+            color: #555;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        ul {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        .highlight {
+            background: #f0f4ff;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .actions {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 24px;
+            margin: 10px 10px 10px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-warning {
+            background: #fbbf24;
+            color: #78350f;
+        }
+
+        .btn-warning:hover {
+            background: #f59e0b;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            h2 {
+                font-size: 20px;
+            }
+
+            .action-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 Privacy Policy</h1>
+        <p class="last-updated">Last Updated: January 3, 2026</p>
+
+        <h2>What Data We Collect</h2>
+        <ul>
+            <li><strong>Google Account Information:</strong> Email, name, and profile photo (via Google OAuth)</li>
+            <li><strong>Device Information:</strong> Device name, type, model, browser fingerprint</li>
+            <li><strong>Location Data:</strong> Real-time GPS coordinates, accuracy, speed (only from registered devices)</li>
+            <li><strong>Battery Status:</strong> Battery level and charging status (if available)</li>
+            <li><strong>Connection Type:</strong> WiFi, cellular network type (if available)</li>
+        </ul>
+
+        <h2>How We Use Your Data</h2>
+        <ul>
+            <li>Display your registered devices on a real-time map</li>
+            <li>Track location history for your devices</li>
+            <li>Provide device status information (battery, connection)</li>
+            <li>Enable location sharing via secure links</li>
+        </ul>
+
+        <h2>Data Security</h2>
+        <div class="highlight">
+            <p><strong>🔐 End-to-End Encryption:</strong> Your location data is encrypted using AES-256-GCM encryption before transmission. Encryption keys are stored only in your browser.</p>
+            <p><strong>🔒 HTTPS:</strong> All data transmission uses SSL/TLS encryption.</p>
+            <p><strong>🛡️ Database Security:</strong> Data is stored in MongoDB Atlas with authentication and access controls.</p>
+        </div>
+
+        <h2>Your Privacy Rights</h2>
+        <ul>
+            <li><strong>Access:</strong> You can view all your registered devices and their locations</li>
+            <li><strong>Delete Location History:</strong> Clear all historical location data anytime</li>
+            <li><strong>Delete Account:</strong> Permanently remove your account and all associated data</li>
+            <li><strong>Unregister Devices:</strong> Remove individual devices from tracking</li>
+        </ul>
+
+        <h2>Data Retention</h2>
+        <p><strong>Automatic Deletion:</strong> Location data older than 30 days is automatically deleted from our servers.</p>
+        <p>You can manually clear your location history or delete your account at any time using the controls below.</p>
+
+        <h2>Third-Party Services</h2>
+        <ul>
+            <li><strong>Google OAuth:</strong> For secure authentication (Google Privacy Policy applies)</li>
+            <li><strong>OpenStreetMap:</strong> For map display (no personal data shared)</li>
+            <li><strong>Render.com:</strong> Application hosting provider</li>
+            <li><strong>MongoDB Atlas:</strong> Database hosting (encrypted storage)</li>
+        </ul>
+
+        <h2>Admin Access</h2>
+        <p>The admin dashboard has access to view all users' device locations for system monitoring purposes. All admin access is logged with timestamps and IP addresses.</p>
+
+        <div class="actions">
+            <h2>Privacy Controls</h2>
+            
+            <button class="action-btn btn-primary" onclick="window.location.href='/tracker'">
+                <span class="material-icons">home</span>
+                <span>Return to Tracker</span>
+            </button>
+
+            <button class="action-btn btn-warning" onclick="clearLocationHistory()">
+                <span class="material-icons">delete_sweep</span>
+                <span>Clear Location History</span>
+            </button>
+
+            <button class="action-btn btn-danger" onclick="deleteAccount()">
+                <span class="material-icons">delete_forever</span>
+                <span>Delete My Account</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        async function clearLocationHistory() {
+            if (!confirm('Are you sure you want to clear all your location history?\n\nThis will remove all historical location data from your registered devices. Your devices will remain registered.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/clear-location-history', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ Location history cleared successfully!');
+                } else {
+                    alert('❌ Error: ' + data.message);
+                }
+            } catch (error) {
+                alert('❌ Error clearing location history: ' + error.message);
+            }
+        }
+
+        async function deleteAccount() {
+            if (!confirm('⚠️ WARNING: Delete Account\n\nThis will permanently delete:\n• Your account\n• All registered devices\n• All location history\n• All settings\n\nThis action CANNOT be undone!\n\nAre you absolutely sure?')) {
+                return;
+            }
+
+            if (!confirm('This is your last chance. Delete your account permanently?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/delete-account', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ Your account has been deleted.\n\nYou will now be logged out.');
+                    window.location.href = '/';
+                } else {
+                    alert('❌ Error: ' + data.message);
+                }
+            } catch (error) {
+                alert('❌ Error deleting account: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

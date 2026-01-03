@@ -3,7 +3,7 @@
 ## Step 1: Add Admin Password to Render
 
 1. **Go to Render Dashboard**
-   - URL: https://dashboard.render.com
+   - URL: xyz
    - Login with your account
 
 2. **Select Your Service**
@@ -19,7 +19,7 @@
      ```
      **Important:** Use a strong, unique password. Consider generating one using:
      - Password manager (recommended)
-     - Command: `openssl rand -base64 32` (if you have OpenSSL)
+     - Command: `` (if you have OpenSSL)
 
 4. **Save Changes**
    - Click **"Save Changes"**
@@ -30,7 +30,7 @@
 After deployment completes:
 
 1. **Open Admin Dashboard**
-   - URL: https://realtime-device-tracker-s9ua.onrender.com/admin
+   - URL: xyz
 
 2. **Login**
    - Enter your admin password (the one you set in Render environment variables)
@@ -54,24 +54,4 @@ The admin dashboard shows:
 
 ## Security Note
 
-⚠️ **Important**: Your admin password (`Althaf@Ali230912`) is:
-- Stored locally in `.env` file (NOT in GitHub)
-- Needs to be added manually to Render environment variables
-- Should be changed to something more secure for production
 
-## Troubleshooting
-
-**If you get "Invalid password":**
-1. Make sure you added `ADMIN_PASSWORD` to Render environment variables
-2. Make sure the value matches exactly: `Althaf@Ali230912`
-3. Wait for deployment to complete
-4. Try clearing browser cache and refreshing
-
-**If the page doesn't load:**
-1. Check Render logs for errors
-2. Make sure deployment completed successfully
-3. Try accessing: https://realtime-device-tracker-s9ua.onrender.com/admin
-
----
-
-**Need help?** Check the Render logs or contact support.
