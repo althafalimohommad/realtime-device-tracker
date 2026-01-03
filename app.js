@@ -146,7 +146,7 @@ io.on("connection", function(socket) {
     console.log("Device connected:", socket.id);
     
     // Handle device registration with name, user, and device info
-    socket.on("register-device", function(data) {
+    socket.on("register-device", async function(data) {
         const device = {
             id: socket.id,
             name: data.name || `Device ${socket.id.substring(0, 5)}`,
