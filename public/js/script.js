@@ -127,6 +127,21 @@ fetch('/api/user')
     });
 
 async function initializeDevice() {
+    // Request location permission first
+    if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser.");
+        return;
+    }
+
+    // Request permission and get initial location
+    try {
+        await requestLocationPermission();
+    } catch (error) {
+        console.error('Location permission denied:', error);
+        alert('Please enable location access to use Find My Device.\n\nGo to browser settings → Site permissions → Location → Allow');
+        return;
+    }
+
     // Check if device is registered by matching fingerprint
     const userAgent = navigator.userAgent;
     const registeredDevice = currentUser.registeredDevices?.find(d => d.fingerprint === userAgent);
@@ -184,11 +199,108 @@ async function initializeDevice() {
             userId: currentUser.id,
             deviceInfo: deviceInfo
         });
+        
+        // Start location tracking immediately after registration
+        startLocationTracking();
     });
+}
 
-    // Setup geolocation with encryption and device info
+// Request location permission
+async function requestLocationPermission() {
+    return new Promise((resolve, reject) => {
+        // Check if permission was already granted
+        if (navigator.permissions) {
+            navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+                if (result.state === 'granted') {
+                    // Permission already granted, get location
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    });
+                } else {
+                    // Show permission modal
+                    showPermissionModal(resolve, reject);
+                }
+            }).catch(() => {
+                // Fallback if permissions API not available
+                showPermissionModal(resolve, reject);
+            });
+        } else {
+            // Fallback for browsers without permissions API
+            showPermissionModal(resolve, reject);
+        }
+    });
+}
+
+// Show location permission modal
+function showPermissionModal(resolve, reject) {
+    const modal = document.getElementById('permission-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        
+        document.getElementById('allow-location-btn').onclick = () => {
+            modal.style.display = 'none';
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    console.log('✅ Location permission granted');
+                    resolve(position);
+                },
+                (error) => {
+                    console.error('❌ Location permission denied:', error);
+                    modal.style.display = 'none';
+                    alert('Location access denied. Please enable it in your browser settings:\n\n1. Click the lock icon in the address bar\n2. Find Location permissions\n3. Select "Allow"');
+                    reject(error);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        };
+        
+        document.getElementById('deny-location-btn').onclick = () => {
+            modal.style.display = 'none';
+            alert('Location access is required to use Find My Device. You can enable it later in browser settings.');
+            reject(new Error('User denied location permission'));
+        };
+    } else {
+        // Fallback if modal not found
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                console.log('✅ Location permission granted');
+                resolve(position);
+            },
+            (error) => {
+                console.error('❌ Location permission denied:', error);
+                reject(error);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    }
+}
+
+// Start continuous location tracking
+function startLocationTracking() {
+    console.log('🌍 Starting location tracking...');
+    
+    // Send initial location immediately
+    sendCurrentLocation();
+    
+    // Update location every 3 minutes (180000 ms)
+    setInterval(() => {
+        sendCurrentLocation();
+        console.log('🔄 Updating location (every 3 minutes)');
+    }, 180000);
+    
+    // Also watch position for real-time updates
     if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(
+        const watchId = navigator.geolocation.watchPosition(
             async (position) => {
                 const { latitude, longitude, accuracy, altitude, speed, heading } = position.coords;
                 
@@ -236,6 +348,7 @@ async function initializeDevice() {
                 switch(error.code) {
                     case error.PERMISSION_DENIED:
                         errorMsg += "Please allow location access in your browser settings.";
+                        showToast('Location permission denied. Please enable it in browser settings.');
                         break;
                     case error.POSITION_UNAVAILABLE:
                         errorMsg += "Location information unavailable. Make sure GPS is enabled.";
@@ -249,13 +362,57 @@ async function initializeDevice() {
             {
                 enableHighAccuracy: true,
                 timeout: 10000,
-                maximumAge: 0,
+                maximumAge: 30000, // Accept cached position up to 30 seconds old
             }
         );
+        
+        // Store watchId for cleanup if needed
+        window.locationWatchId = watchId;
     } else {
         alert("Geolocation is not supported by your browser.");
     }
 }
+
+// Helper function to get device info (needed for location tracking)
+async function getDeviceInfo() {
+    const detectedDevice = detectDevice();
+    const info = {
+        battery: null,
+        charging: false,
+        platform: navigator.platform,
+        userAgent: navigator.userAgent,
+        screenResolution: `${screen.width}x${screen.height}`,
+        connection: null,
+        deviceType: detectedDevice.name,
+        deviceIcon: detectedDevice.icon
+    };
+
+    // Get battery info
+    if ('getBattery' in navigator) {
+        try {
+            const battery = await navigator.getBattery();
+            info.battery = Math.round(battery.level * 100);
+            info.charging = battery.charging;
+        } catch (err) {
+            console.log('Battery API not available');
+        }
+    }
+
+    // Get connection info
+    if ('connection' in navigator || 'mozConnection' in navigator || 'webkitConnection' in navigator) {
+        const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        info.connection = conn.effectiveType || conn.type || 'unknown';
+    }
+
+    return info;
+}
+
+// Setup geolocation with encryption and device info (REMOVED - now using startLocationTracking)
+/*
+if (navigator.geolocation) {
+    // This code is now handled by startLocationTracking()
+}
+*/
 
 // Initialize map
 const map = L.map("map").setView([0, 0], 2);
@@ -272,7 +429,7 @@ async function sendCurrentLocation() {
         navigator.geolocation.getCurrentPosition(
             async (position) => {
                 const { latitude, longitude, accuracy, altitude, speed, heading } = position.coords;
-                console.log(`📍 Sending current location - Accuracy: ${accuracy}m`);
+                console.log(`📍 Sending current location - Accuracy: ${accuracy}m, Lat: ${latitude.toFixed(5)}, Lng: ${longitude.toFixed(5)}`);
                 
                 const deviceInfo = await getDeviceInfo();
                 const encryptedLocation = await encryption.encrypt(
@@ -289,7 +446,9 @@ async function sendCurrentLocation() {
                 const locationData = { 
                     encrypted: encryptedLocation,
                     battery: deviceInfo.battery,
-                    charging: deviceInfo.charging
+                    charging: deviceInfo.charging,
+                    latitude: latitude,  // Always include for own device
+                    longitude: longitude
                 };
                 
                 const currentDevice = devices.get(socket.id);
@@ -302,6 +461,7 @@ async function sendCurrentLocation() {
             },
             (error) => {
                 console.error('Failed to get current location:', error);
+                showToast('Unable to get location. Please check permissions.');
             },
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );

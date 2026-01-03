@@ -85,6 +85,23 @@
        <button class="map-type-btn" data-type="satellite">Satellite</button>
    </div>
 
+   <!-- Location Permission Modal -->
+   <div id="permission-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); z-index: 10000; align-items: center; justify-content: center;">
+       <div style="background: white; border-radius: 16px; padding: 32px; max-width: 400px; margin: 20px; text-align: center;">
+           <i class="material-icons" style="font-size: 64px; color: #1a73e8; margin-bottom: 16px;">location_on</i>
+           <h2 style="font-size: 24px; font-weight: 400; color: #202124; margin-bottom: 12px;">Enable Location Services</h2>
+           <p style="font-size: 14px; color: #5f6368; margin-bottom: 24px;">
+               Find Hub needs access to your location to track your device and show it on the map.
+           </p>
+           <button id="allow-location-btn" style="width: 100%; padding: 14px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; margin-bottom: 8px;">
+               Allow Location Access
+           </button>
+           <button id="deny-location-btn" style="width: 100%; padding: 14px; background: transparent; color: #5f6368; border: none; border-radius: 8px; font-size: 14px; cursor: pointer;">
+               Not Now
+           </button>
+       </div>
+   </div>
+
    <!-- Scripts -->
     <script src="/js/encryption.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" 
