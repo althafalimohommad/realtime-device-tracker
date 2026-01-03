@@ -908,9 +908,13 @@ function showDeviceDetails(deviceId) {
             </div>
         </div>
         <div class="device-actions-panel">
-            <button class="action-btn" onclick="copyLocation('${deviceId}')" style="background: #1a73e8; color: white; width: 100%;">
+            <button class="action-btn" onclick="copyLocation('${deviceId}')" style="background: #1a73e8; color: white; width: 100%; margin-bottom: 12px;">
                 <i class="material-icons">content_copy</i>
                 <span class="action-btn-text">Copy Location</span>
+            </button>
+            <button class="action-btn" onclick="unregisterDevice('${deviceId}')" style="background: #ea4335; color: white; width: 100%;">
+                <i class="material-icons">delete</i>
+                <span class="action-btn-text">Unregister Device</span>
             </button>
             <p style="font-size: 12px; color: #5f6368; margin-top: 12px; text-align: center; padding: 0 16px;">
                 💡 Paste the copied coordinates in Google Maps to get the exact location of your device
@@ -986,6 +990,84 @@ function copyLocation(deviceId) {
         }
         document.body.removeChild(textArea);
     });
+}
+
+async function unregisterDevice(deviceId) {
+    const device = devices.get(deviceId);
+    let deviceName = device?.name;
+    
+    // If not in devices map, check currentUser.registeredDevices
+    if (!deviceName && currentUser && currentUser.registeredDevices) {
+        const registeredDevice = currentUser.registeredDevices.find(d => d.id === deviceId);
+        if (registeredDevice) {
+            deviceName = registeredDevice.name;
+        }
+    }
+    
+    if (!deviceName) {
+        showToast('❌ Device not found');
+        return;
+    }
+    
+    // Confirmation dialog
+    const confirmed = confirm(`Are you sure you want to unregister "${deviceName}"?\n\nThis will:\n• Remove the device from your account\n• Stop location tracking\n• Remove device from the map\n\nThis action cannot be undone.`);
+    
+    if (!confirmed) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/unregister-device', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ deviceId })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('✅ Device unregistered successfully');
+            
+            // Remove from local devices map
+            devices.delete(deviceId);
+            
+            // Remove marker from map
+            if (markers[deviceId]) {
+                map.removeLayer(markers[deviceId]);
+                delete markers[deviceId];
+            }
+            
+            // Update currentUser.registeredDevices
+            if (currentUser && currentUser.registeredDevices) {
+                currentUser.registeredDevices = currentUser.registeredDevices.filter(d => d.id !== deviceId);
+            }
+            
+            // Clear selection if this was the selected device
+            if (selectedDeviceId === deviceId) {
+                selectedDeviceId = null;
+                document.getElementById('device-details').innerHTML = `
+                    <div class="no-device-selected">
+                        <i class="material-icons">devices</i>
+                        <p>Select a device to view details</p>
+                    </div>
+                `;
+            }
+            
+            // Update device list
+            updateDeviceList();
+            
+            // Reload page after 1 second to refresh everything
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showToast('❌ Failed to unregister device: ' + result.message);
+        }
+    } catch (error) {
+        showToast('❌ Error unregistering device: ' + error.message);
+    }
 }
 
 function showToast(message) {

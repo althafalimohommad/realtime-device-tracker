@@ -474,6 +474,59 @@ app.post('/api/register-device', isAuthenticated, async function(req, res) {
     }
 });
 
+// Unregister device endpoint
+app.post('/api/unregister-device', isAuthenticated, async function(req, res) {
+    try {
+        const userId = req.user.id;
+        const { deviceId } = req.body;
+        
+        if (!deviceId) {
+            return res.status(400).json({ success: false, message: 'Device ID required' });
+        }
+        
+        // Get user from cache or database
+        let user = usersDB[userId];
+        if (!user && useMongoDb) {
+            user = await database.getUser(userId);
+            if (user) {
+                usersDB[userId] = user;
+            }
+        }
+        
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        
+        if (!user.registeredDevices) {
+            return res.status(404).json({ success: false, message: 'No registered devices found' });
+        }
+        
+        // Find device to unregister
+        const deviceIndex = user.registeredDevices.findIndex(d => d.id === deviceId);
+        
+        if (deviceIndex === -1) {
+            return res.status(404).json({ success: false, message: 'Device not found' });
+        }
+        
+        // Remove device from array
+        const removedDevice = user.registeredDevices.splice(deviceIndex, 1)[0];
+        
+        // Save to database
+        await saveUser(user);
+        
+        console.log(`Device unregistered: ${removedDevice.name} for user ${userId}`);
+        
+        res.json({ 
+            success: true, 
+            message: 'Device unregistered successfully',
+            deviceName: removedDevice.name
+        });
+    } catch (error) {
+        console.error('Error unregistering device:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // Admin middleware
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
