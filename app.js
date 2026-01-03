@@ -93,6 +93,7 @@ io.on("connection", function(socket) {
             id: socket.id,
             name: data.name || `Device ${socket.id.substring(0, 5)}`,
             userId: data.userId || null,
+            isRegistered: data.isRegistered || false,
             lastSeen: new Date(),
             latitude: null,
             longitude: null,
@@ -111,17 +112,18 @@ io.on("connection", function(socket) {
             socket.join(`user_${data.userId}`);
         }
         
-        // Update user's devices in database
-        if (data.userId && usersDB[data.userId]) {
+        // Only update user's devices in database if device is registered
+        if (data.isRegistered && data.userId && usersDB[data.userId]) {
             if (!usersDB[data.userId].devices.includes(data.name)) {
                 usersDB[data.userId].devices.push(data.name);
                 saveUsers();
             }
         }
         
-        // Send devices to this user only (instant room broadcast)
+        // Send only registered devices to this user
         if (data.userId) {
-            const userDevices = Array.from(devices.values()).filter(d => d.userId === data.userId);
+            const userDevices = Array.from(devices.values())
+                .filter(d => d.userId === data.userId && d.isRegistered === true);
             // Broadcast to ALL devices in this user's room (including the new one)
             io.to(`user_${data.userId}`).emit("devices-update", userDevices);
         }
@@ -130,7 +132,7 @@ io.on("connection", function(socket) {
     // Handle location updates (encrypted)
     socket.on("send-location", function(data) {
         const device = devices.get(socket.id);
-        if (device) {
+        if (device && device.isRegistered) { // Only process location for registered devices
             // Store encrypted data without decrypting (E2EE)
             device.encryptedLocation = data.encrypted;
             device.battery = data.battery || null;
@@ -143,7 +145,7 @@ io.on("connection", function(socket) {
                 device.longitude = data.longitude;
             }
             
-            // Broadcast instantly to user's room (all their devices)
+            // Broadcast instantly to user's room (all their registered devices)
             if (device.userId) {
                 // Send location to all of this user's devices (instant room broadcast)
                 io.to(`user_${device.userId}`).emit("receive-location", { 
@@ -154,7 +156,8 @@ io.on("connection", function(socket) {
                 });
                 
                 // Update devices list with battery info (instant room broadcast)
-                const userDevices = Array.from(devices.values()).filter(d => d.userId === device.userId);
+                const userDevices = Array.from(devices.values())
+                    .filter(d => d.userId === device.userId && d.isRegistered === true);
                 io.to(`user_${device.userId}`).emit("devices-update", userDevices);
             }
         }

@@ -105,8 +105,13 @@ fetch('/api/user')
         console.log('Logged in as:', user.email);
         console.log('Registered devices:', user.registeredDevices);
         
+        // Initialize registeredDevices array if it doesn't exist
+        if (!currentUser.registeredDevices) {
+            currentUser.registeredDevices = [];
+        }
+        
         // Check if user has registered devices
-        if (!user.registeredDevices || user.registeredDevices.length === 0) {
+        if (currentUser.registeredDevices.length === 0) {
             // Redirect to register device if no devices registered
             if (window.location.pathname === '/tracker') {
                 alert('Please register this device first to use Find Device feature.');
@@ -118,6 +123,17 @@ fetch('/api/user')
         // Initialize encryption key for this user
         encryptionKey = await encryption.getOrCreateKey(currentUser.id);
         console.log('🔐 End-to-end encryption enabled');
+        
+        // Check if THIS device is registered
+        const userAgent = navigator.userAgent;
+        const isThisDeviceRegistered = currentUser.registeredDevices.some(d => d.fingerprint === userAgent);
+        
+        if (!isThisDeviceRegistered && window.location.pathname === '/tracker') {
+            if (confirm('This device is not registered. Would you like to register it now?')) {
+                window.location.href = '/register-device';
+                return;
+            }
+        }
         
         initializeDevice();
     })
@@ -133,7 +149,38 @@ async function initializeDevice() {
         return;
     }
 
-    // Request permission and get initial location
+    // Check if THIS device is registered
+    const userAgent = navigator.userAgent;
+    const registeredDevice = currentUser.registeredDevices?.find(d => d.fingerprint === userAgent);
+    
+    if (!registeredDevice) {
+        console.warn('⚠️ This device is not registered. Location will not be tracked.');
+        deviceName = detectDevice().name;
+        localStorage.setItem('deviceName', deviceName);
+        
+        // Register device but don't track location
+        const detectedDevice = detectDevice();
+        const deviceInfo = {
+            battery: null,
+            charging: false,
+            platform: navigator.platform,
+            userAgent: navigator.userAgent,
+            deviceType: detectedDevice.name,
+            deviceIcon: detectedDevice.icon,
+            isRegistered: false
+        };
+        
+        socket.emit("register-device", { 
+            name: deviceName, 
+            userId: currentUser.id,
+            deviceInfo: deviceInfo,
+            isRegistered: false
+        });
+        
+        return; // Don't track location for unregistered devices
+    }
+
+    // Request location permission for registered devices only
     try {
         await requestLocationPermission();
     } catch (error) {
@@ -142,20 +189,9 @@ async function initializeDevice() {
         return;
     }
 
-    // Check if device is registered by matching fingerprint
-    const userAgent = navigator.userAgent;
-    const registeredDevice = currentUser.registeredDevices?.find(d => d.fingerprint === userAgent);
-    
-    // Auto-detect device if not set or use registered device name
-    if (registeredDevice) {
-        deviceName = registeredDevice.name;
-        console.log(`📱 Using registered device: ${deviceName}`);
-    } else if (!deviceName) {
-        const detectedDevice = detectDevice();
-        deviceName = detectedDevice.name;
-        console.log(`📱 Auto-detected: ${deviceName}`);
-    }
-    
+    // Use registered device name
+    deviceName = registeredDevice.name;
+    console.log(`📱 Using registered device: ${deviceName}`);
     localStorage.setItem('deviceName', deviceName);
 
     // Get device information
@@ -194,10 +230,13 @@ async function initializeDevice() {
 
     // Register device with user ID and device info
     getDeviceInfo().then(deviceInfo => {
+        deviceInfo.isRegistered = true; // Mark as registered
+        
         socket.emit("register-device", { 
             name: deviceName, 
             userId: currentUser.id,
-            deviceInfo: deviceInfo
+            deviceInfo: deviceInfo,
+            isRegistered: true
         });
         
         // Start location tracking immediately after registration
@@ -619,14 +658,18 @@ function updateDeviceList() {
     const list = document.getElementById('device-list');
     list.innerHTML = '';
     
-    // Only show devices belonging to current user
-    const userDevices = Array.from(devices.values()).filter(d => d.userId === currentUser.id);
+    // Only show devices belonging to current user AND are registered
+    const userDevices = Array.from(devices.values()).filter(d => {
+        const isUserDevice = d.userId === currentUser.id;
+        const isRegistered = d.isRegistered === true;
+        return isUserDevice && isRegistered;
+    });
     
     if (userDevices.length === 0) {
         list.innerHTML = `
             <div style="padding: 20px; text-align: center; color: #5f6368;">
                 <i class="material-icons" style="font-size: 48px; color: #dadce0; margin-bottom: 12px;">devices</i>
-                <p style="margin-bottom: 16px;">No devices online</p>
+                <p style="margin-bottom: 16px;">No registered devices online</p>
                 <a href="/register-device" style="display: inline-block; padding: 10px 20px; background: #1a73e8; color: white; text-decoration: none; border-radius: 8px; font-size: 14px;">
                     Register Another Device
                 </a>
