@@ -921,8 +921,23 @@ function showDeviceDetails(deviceId) {
 
 function getTimeAgo(timestamp) {
     if (!timestamp) return 'just now';
-    const seconds = Math.floor((Date.now() - timestamp) / 1000);
-    if (seconds < 60) return 'just now';
+    
+    // Handle both Date objects and timestamp numbers and ISO strings
+    let timestampMs;
+    if (typeof timestamp === 'string') {
+        timestampMs = new Date(timestamp).getTime();
+    } else if (typeof timestamp === 'number') {
+        timestampMs = timestamp;
+    } else if (timestamp instanceof Date) {
+        timestampMs = timestamp.getTime();
+    } else {
+        return 'just now';
+    }
+    
+    if (isNaN(timestampMs)) return 'just now';
+    
+    const seconds = Math.floor((Date.now() - timestampMs) / 1000);
+    if (seconds < 0 || seconds < 60) return 'just now';
     const minutes = Math.floor(seconds / 60);
     if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
     const hours = Math.floor(minutes / 60);
@@ -933,12 +948,24 @@ function getTimeAgo(timestamp) {
 
 function copyLocation(deviceId) {
     const device = devices.get(deviceId);
-    if (!device || device.latitude == null || device.longitude == null) {
+    let latitude = device?.latitude;
+    let longitude = device?.longitude;
+    
+    // If not in devices map, check currentUser.registeredDevices
+    if ((latitude == null || longitude == null) && currentUser && currentUser.registeredDevices) {
+        const registeredDevice = currentUser.registeredDevices.find(d => d.id === deviceId);
+        if (registeredDevice) {
+            latitude = registeredDevice.latitude;
+            longitude = registeredDevice.longitude;
+        }
+    }
+    
+    if (latitude == null || longitude == null) {
         showToast('❌ Location not available for this device');
         return;
     }
     
-    const locationText = `${device.latitude}, ${device.longitude}`;
+    const locationText = `${latitude}, ${longitude}`;
     
     // Copy to clipboard
     navigator.clipboard.writeText(locationText).then(() => {
