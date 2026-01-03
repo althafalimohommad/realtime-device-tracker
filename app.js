@@ -350,10 +350,64 @@ app.get('/api/user', isAuthenticated, function(req, res) {
 });
 
 // API endpoint to register a device
+// API endpoint to update device location
+app.post('/api/update-location', isAuthenticated, async function(req, res) {
+    try {
+        const userId = req.user.id;
+        const { latitude, longitude, accuracy } = req.body;
+        const fingerprint = req.headers['user-agent'];
+        
+        console.log(`📍 Location update from user ${userId}: ${latitude}, ${longitude}`);
+        
+        // Get user from cache or database
+        let user = usersDB[userId];
+        if (!user && useMongoDb) {
+            user = await database.getUser(userId);
+            if (user) {
+                usersDB[userId] = user;
+            }
+        }
+        
+        if (!user || !user.registeredDevices) {
+            return res.status(404).json({ success: false, message: 'User or device not found' });
+        }
+        
+        // Find the registered device
+        const device = user.registeredDevices.find(d => d.fingerprint === fingerprint);
+        if (!device) {
+            return res.status(404).json({ success: false, message: 'Device not registered' });
+        }
+        
+        // Update device location
+        device.latitude = latitude;
+        device.longitude = longitude;
+        device.accuracy = accuracy;
+        device.lastLocationUpdate = new Date().toISOString();
+        
+        // Save to database
+        await saveUser(user);
+        
+        // Broadcast location to all user's connected devices via socket
+        io.to(`user_${userId}`).emit('location-updated', {
+            deviceId: device.id,
+            deviceName: device.name,
+            latitude,
+            longitude,
+            accuracy,
+            timestamp: device.lastLocationUpdate
+        });
+        
+        res.json({ success: true, message: 'Location updated' });
+    } catch (error) {
+        console.error('Error updating location:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 app.post('/api/register-device', isAuthenticated, async function(req, res) {
     try {
         const userId = req.user.id;
-        const { deviceName, deviceType, deviceModel, platform, browser, deviceIcon } = req.body;
+        const { deviceName, deviceType, deviceModel, platform, browser, deviceIcon, initialLocation } = req.body;
         
         // Create device registration
         const deviceId = crypto.randomBytes(16).toString('hex');
@@ -366,7 +420,10 @@ app.post('/api/register-device', isAuthenticated, async function(req, res) {
             browser: browser,
             icon: deviceIcon,
             registeredAt: new Date().toISOString(),
-            fingerprint: req.headers['user-agent'] // Basic fingerprinting
+            fingerprint: req.headers['user-agent'], // Basic fingerprinting
+            latitude: initialLocation?.latitude || null,
+            longitude: initialLocation?.longitude || null,
+            lastLocationUpdate: initialLocation ? new Date().toISOString() : null
         };
         
         // Get user from cache or database

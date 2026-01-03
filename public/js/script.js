@@ -136,6 +136,9 @@ fetch('/api/user')
         }
         
         initializeDevice();
+        
+        // Load registered devices from database and show their locations
+        loadRegisteredDevicesLocations();
     })
     .catch(err => {
         console.error('Not authenticated:', err);
@@ -603,6 +606,49 @@ socket.on("receive-location", async (data) => {
     }
 });
 
+// Handle location updates from API (background tracking)
+socket.on('location-updated', (data) => {
+    console.log('📍 Location updated from API:', data);
+    const { deviceId, deviceName, latitude, longitude, accuracy, timestamp } = data;
+    
+    // Update device in map
+    let device = devices.get(deviceId);
+    if (!device) {
+        // Create device entry if it doesn't exist
+        device = {
+            id: deviceId,
+            name: deviceName,
+            isRegistered: true,
+            userId: currentUser.id,
+            deviceIcon: '📱',
+            latitude,
+            longitude,
+            lastSeen: timestamp,
+            battery: null,
+            charging: false
+        };
+        devices.set(deviceId, device);
+    } else {
+        // Update existing device
+        device.latitude = latitude;
+        device.longitude = longitude;
+        device.lastSeen = timestamp;
+    }
+    
+    // Add or update marker
+    addOrUpdateMarker(deviceId, {
+        latitude,
+        longitude,
+        accuracy,
+        battery: device.battery,
+        charging: device.charging,
+        timestamp
+    });
+    
+    // Update device list
+    updateDeviceList();
+});
+
 // Handle devices update
 socket.on("devices-update", (devicesList) => {
     console.log('Devices update received:', devicesList);
@@ -713,6 +759,115 @@ function updateDeviceList() {
     // Auto-select first device if none selected
     if (!selectedDeviceId && userDevices.length > 0) {
         selectDevice(userDevices[0].id);
+    }
+}
+
+// Load registered devices from database and show their last known locations
+async function loadRegisteredDevicesLocations() {
+    console.log('📍 Loading registered devices locations...');
+    
+    if (!currentUser || !currentUser.registeredDevices) return;
+    
+    // Filter devices that have location data
+    const devicesWithLocation = currentUser.registeredDevices.filter(d => 
+        d.latitude != null && d.longitude != null
+    );
+    
+    console.log(`Found ${devicesWithLocation.length} devices with stored locations`);
+    
+    devicesWithLocation.forEach(device => {
+        // Add to devices map if not already there
+        if (!devices.has(device.id)) {
+            const deviceData = {
+                id: device.id,
+                name: device.name,
+                deviceIcon: device.icon || '📱',
+                deviceType: device.type,
+                isRegistered: true,
+                userId: currentUser.id,
+                latitude: device.latitude,
+                longitude: device.longitude,
+                lastSeen: device.lastLocationUpdate || device.registeredAt,
+                battery: null,
+                charging: false
+            };
+            devices.set(device.id, deviceData);
+            
+            // Add marker to map
+            addOrUpdateMarker(device.id, {
+                latitude: device.latitude,
+                longitude: device.longitude,
+                accuracy: device.accuracy || 50,
+                battery: null,
+                charging: false,
+                timestamp: device.lastLocationUpdate || new Date().toISOString()
+            });
+        }
+    });
+    
+    // Update device list
+    updateDeviceList();
+}
+
+// Helper function to add or update marker on map
+function addOrUpdateMarker(deviceId, locationData) {
+    const { latitude, longitude, accuracy, battery, charging, timestamp } = locationData;
+    
+    if (!latitude || !longitude) {
+        console.warn('Cannot add marker: missing coordinates');
+        return;
+    }
+    
+    console.log(`Adding/updating marker for device ${deviceId} at ${latitude}, ${longitude}`);
+    
+    if (markers[deviceId]) {
+        // Update existing marker
+        markers[deviceId].setLatLng([latitude, longitude]);
+        const device = devices.get(deviceId);
+        const name = device ? device.name : `Device ${deviceId.substring(0, 5)}`;
+        const timeAgo = new Date(timestamp).toLocaleTimeString();
+        const batteryDisplay = battery !== null ? 
+            `<span style="color: ${getBatteryColor(battery)}">${getBatteryIcon(battery, charging)} ${battery}%</span>` : 
+            'N/A';
+        
+        markers[deviceId].setPopupContent(`
+            <div class="device-popup">
+                <b>${name}</b><br>
+                <div class="popup-info">
+                    📍 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}<br>
+                    ${battery !== null ? `${batteryDisplay}${charging ? ' (Charging)' : ''}<br>` : ''}
+                    ${accuracy ? `📏 Accuracy: ±${Math.round(accuracy)}m<br>` : ''}
+                    ⏰ ${timeAgo}
+                </div>
+            </div>
+        `);
+    } else {
+        // Create new marker
+        const marker = L.marker([latitude, longitude]).addTo(map);
+        const device = devices.get(deviceId);
+        const name = device ? device.name : `Device ${deviceId.substring(0, 5)}`;
+        const timeAgo = new Date(timestamp).toLocaleTimeString();
+        const batteryDisplay = battery !== null ? 
+            `<span style="color: ${getBatteryColor(battery)}">${getBatteryIcon(battery, charging)} ${battery}%</span>` : 
+            'N/A';
+        
+        marker.bindPopup(`
+            <div class="device-popup">
+                <b>${name}</b><br>
+                <div class="popup-info">
+                    📍 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}<br>
+                    ${battery !== null ? `${batteryDisplay}${charging ? ' (Charging)' : ''}<br>` : ''}
+                    ${accuracy ? `📏 Accuracy: ±${Math.round(accuracy)}m<br>` : ''}
+                    ⏰ ${timeAgo}
+                </div>
+            </div>
+        `);
+        markers[deviceId] = marker;
+        
+        // Auto zoom to first marker
+        if (Object.keys(markers).length === 1) {
+            map.setView([latitude, longitude], 16);
+        }
     }
 }
 
