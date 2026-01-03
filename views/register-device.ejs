@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Register Device - Find Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 40px auto;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 20px;
+            font-size: 16px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .device-icon-large {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 400;
+            color: #202124;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: #5f6368;
+        }
+
+        .device-info {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #dadce0;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-row .label {
+            font-size: 14px;
+            color: #5f6368;
+        }
+
+        .info-row .value {
+            font-size: 14px;
+            font-weight: 500;
+            color: #202124;
+            text-align: right;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #202124;
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #dadce0;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #1a73e8;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: #e8f0fe;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .user-info img {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+        }
+
+        .user-info .details {
+            flex: 1;
+        }
+
+        .user-info .details .name {
+            font-size: 16px;
+            font-weight: 500;
+            color: #202124;
+        }
+
+        .user-info .details .email {
+            font-size: 14px;
+            color: #5f6368;
+        }
+
+        .register-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-family: inherit;
+        }
+
+        .register-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .register-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .success-message {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .success-message .icon {
+            font-size: 64px;
+            color: #10b981;
+            margin-bottom: 16px;
+        }
+
+        .success-message h2 {
+            font-size: 24px;
+            font-weight: 400;
+            color: #202124;
+            margin-bottom: 8px;
+        }
+
+        .success-message p {
+            font-size: 14px;
+            color: #5f6368;
+            margin-bottom: 24px;
+        }
+
+        .success-message .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #1a73e8;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        @media (max-width: 480px) {
+            .card {
+                padding: 24px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-btn">
+            <i class="material-icons">arrow_back</i>
+            Back
+        </a>
+
+        <div class="card">
+            <div id="registration-form">
+                <div class="header">
+                    <div class="device-icon-large" id="deviceIcon">📱</div>
+                    <h1>Register This Device</h1>
+                    <p>Add this device to your Find Hub account</p>
+                </div>
+
+                <div class="user-info">
+                    <img src="<%= user.photo %>" alt="<%= user.name %>">
+                    <div class="details">
+                        <div class="name"><%= user.name %></div>
+                        <div class="email"><%= user.email %></div>
+                    </div>
+                </div>
+
+                <div class="device-info">
+                    <div class="info-row">
+                        <span class="label">Device Type</span>
+                        <span class="value" id="deviceType">Loading...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Model</span>
+                        <span class="value" id="deviceModel">Loading...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Platform</span>
+                        <span class="value" id="devicePlatform">Loading...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Browser</span>
+                        <span class="value" id="deviceBrowser">Loading...</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="deviceName">Device Name (Optional)</label>
+                    <input type="text" id="deviceName" placeholder="e.g., My iPhone, Work Laptop">
+                </div>
+
+                <button class="register-btn" onclick="registerDevice()">
+                    <i class="material-icons" style="vertical-align: middle; margin-right: 8px;">add_circle</i>
+                    Register This Device
+                </button>
+            </div>
+
+            <div id="success-message" class="success-message">
+                <i class="material-icons icon">check_circle</i>
+                <h2>Device Registered!</h2>
+                <p>Your device has been successfully added to your account</p>
+                <a href="/tracker" class="btn">Go to Find Device</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Device detection
+        function detectDevice() {
+            const ua = navigator.userAgent;
+            let deviceType = 'Unknown';
+            let deviceIcon = '📱';
+            let deviceModel = 'Unknown';
+            let platform = navigator.platform;
+            
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+            const isTablet = /iPad|Android(?!.*Mobile)|Tablet/i.test(ua);
+            
+            if (isMobile && !isTablet) {
+                deviceIcon = '📱';
+                deviceType = 'Mobile Phone';
+                
+                if (ua.includes('iPhone')) {
+                    deviceType = 'iPhone';
+                    deviceModel = 'iPhone';
+                    const match = ua.match(/iPhone OS ([\d_]+)/);
+                    if (match) deviceModel += ' (iOS ' + match[1].replace(/_/g, '.') + ')';
+                } else if (ua.includes('Android')) {
+                    deviceType = 'Android Phone';
+                    const match = ua.match(/Android ([\d.]+)/);
+                    if (match) deviceModel = 'Android ' + match[1];
+                    
+                    if (ua.includes('SM-')) {
+                        const smMatch = ua.match(/SM-([A-Z0-9]+)/);
+                        if (smMatch) deviceModel = 'Samsung ' + smMatch[1];
+                    } else if (ua.includes('Pixel')) {
+                        const pixelMatch = ua.match(/Pixel\s*(\d+\s*\w*)/);
+                        deviceModel = pixelMatch ? 'Google Pixel ' + pixelMatch[1] : 'Google Pixel';
+                    } else if (ua.includes('Redmi')) {
+                        const redmiMatch = ua.match(/Redmi\s*([A-Z0-9\s]+)/i);
+                        deviceModel = redmiMatch ? 'Xiaomi Redmi ' + redmiMatch[1].trim() : 'Xiaomi Redmi';
+                    }
+                }
+            } else if (isTablet) {
+                deviceIcon = '📲';
+                deviceType = 'Tablet';
+                if (ua.includes('iPad')) {
+                    deviceType = 'iPad';
+                    deviceModel = 'iPad';
+                    if (ua.includes('iPad Pro')) deviceModel = 'iPad Pro';
+                    else if (ua.includes('iPad Air')) deviceModel = 'iPad Air';
+                    else if (ua.includes('iPad Mini')) deviceModel = 'iPad Mini';
+                } else {
+                    deviceModel = 'Android Tablet';
+                }
+            } else {
+                deviceIcon = '💻';
+                deviceType = 'Computer';
+                
+                if (ua.includes('Windows')) {
+                    deviceType = 'Windows PC';
+                    deviceModel = 'Windows Computer';
+                    if (ua.includes('Windows NT 10')) deviceModel = 'Windows 11 PC';
+                } else if (ua.includes('Mac OS X')) {
+                    deviceType = 'Mac';
+                    deviceModel = 'MacBook';
+                    const match = ua.match(/Mac OS X\s*([\d_]+)?/);
+                    if (match && parseFloat(match[1]?.replace(/_/g, '.')) >= 11) {
+                        deviceModel = 'MacBook (Apple Silicon)';
+                    }
+                } else if (ua.includes('Linux')) {
+                    deviceType = 'Linux PC';
+                    deviceModel = 'Linux Computer';
+                } else if (ua.includes('CrOS')) {
+                    deviceType = 'Chromebook';
+                    deviceModel = 'Chromebook';
+                }
+            }
+            
+            // Detect browser
+            let browser = 'Unknown Browser';
+            if (ua.includes('Edg')) browser = 'Microsoft Edge';
+            else if (ua.includes('Chrome')) browser = 'Google Chrome';
+            else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari';
+            else if (ua.includes('Firefox')) browser = 'Mozilla Firefox';
+            else if (ua.includes('Opera') || ua.includes('OPR')) browser = 'Opera';
+            
+            return { deviceType, deviceIcon, deviceModel, platform, browser };
+        }
+
+        // Initialize device info
+        const deviceInfo = detectDevice();
+        document.getElementById('deviceIcon').textContent = deviceInfo.deviceIcon;
+        document.getElementById('deviceType').textContent = deviceInfo.deviceType;
+        document.getElementById('deviceModel').textContent = deviceInfo.deviceModel;
+        document.getElementById('devicePlatform').textContent = deviceInfo.platform;
+        document.getElementById('deviceBrowser').textContent = deviceInfo.browser;
+        
+        // Set default device name
+        document.getElementById('deviceName').value = deviceInfo.deviceModel;
+
+        // Register device
+        async function registerDevice() {
+            const btn = document.querySelector('.register-btn');
+            btn.disabled = true;
+            btn.textContent = 'Registering...';
+
+            const deviceName = document.getElementById('deviceName').value || deviceInfo.deviceModel;
+            
+            try {
+                const response = await fetch('/api/register-device', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        deviceName: deviceName,
+                        deviceType: deviceInfo.deviceType,
+                        deviceModel: deviceInfo.deviceModel,
+                        platform: deviceInfo.platform,
+                        browser: deviceInfo.browser,
+                        deviceIcon: deviceInfo.deviceIcon
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('registration-form').style.display = 'none';
+                    document.getElementById('success-message').style.display = 'block';
+                } else {
+                    alert('Registration failed: ' + result.message);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="material-icons" style="vertical-align: middle; margin-right: 8px;">add_circle</i>Register This Device';
+                }
+            } catch (error) {
+                alert('Error registering device: ' + error.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="material-icons" style="vertical-align: middle; margin-right: 8px;">add_circle</i>Register This Device';
+            }
+        }
+    </script>
+</body>
+</html>

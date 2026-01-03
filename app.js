@@ -43,7 +43,8 @@ passport.use(new GoogleStrategy({
             email: profile.emails[0].value,
             name: profile.displayName,
             photo: profile.photos[0].value,
-            devices: []
+            devices: [],
+            registeredDevices: []
         };
         saveUsers();
     }
@@ -61,6 +62,8 @@ passport.deserializeUser((id, done) => {
 // Middleware
 app.set("view engine", "ejs");
 app.use(express.static(path.join(__dirname, "public")));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
@@ -239,6 +242,23 @@ app.get("/", function (req, res) {
     if (!req.isAuthenticated()) {
         return res.redirect('/login');
     }
+    res.render("home", { user: req.user });
+});
+
+app.get("/register-device", isAuthenticated, function (req, res) {
+    res.render("register-device", { user: req.user });
+});
+
+app.get("/find-device", isAuthenticated, function (req, res) {
+    // Check if user has registered devices
+    const user = req.user;
+    if (!user.registeredDevices || user.registeredDevices.length === 0) {
+        return res.redirect('/register-device');
+    }
+    res.redirect('/tracker');
+});
+
+app.get("/tracker", isAuthenticated, function (req, res) {
     res.render("index", { user: req.user });
 });
 
@@ -266,6 +286,60 @@ app.get('/logout', function(req, res) {
 
 app.get('/api/user', isAuthenticated, function(req, res) {
     res.json(req.user);
+});
+
+// API endpoint to register a device
+app.post('/api/register-device', isAuthenticated, function(req, res) {
+    try {
+        const userId = req.user.id;
+        const { deviceName, deviceType, deviceModel, platform, browser, deviceIcon } = req.body;
+        
+        // Create device registration
+        const deviceId = crypto.randomBytes(16).toString('hex');
+        const deviceRegistration = {
+            id: deviceId,
+            name: deviceName,
+            type: deviceType,
+            model: deviceModel,
+            platform: platform,
+            browser: browser,
+            icon: deviceIcon,
+            registeredAt: new Date().toISOString(),
+            fingerprint: req.headers['user-agent'] // Basic fingerprinting
+        };
+        
+        // Initialize registeredDevices array if it doesn't exist
+        if (!usersDB[userId].registeredDevices) {
+            usersDB[userId].registeredDevices = [];
+        }
+        
+        // Check if this device is already registered (by fingerprint)
+        const existingDevice = usersDB[userId].registeredDevices.find(
+            d => d.fingerprint === deviceRegistration.fingerprint
+        );
+        
+        if (existingDevice) {
+            // Update existing device
+            existingDevice.name = deviceName;
+            existingDevice.type = deviceType;
+            existingDevice.model = deviceModel;
+            existingDevice.lastUpdated = new Date().toISOString();
+        } else {
+            // Add new device
+            usersDB[userId].registeredDevices.push(deviceRegistration);
+        }
+        
+        saveUsers();
+        
+        res.json({ 
+            success: true, 
+            deviceId: existingDevice ? existingDevice.id : deviceId,
+            message: existingDevice ? 'Device updated successfully' : 'Device registered successfully'
+        });
+    } catch (error) {
+        console.error('Error registering device:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
 });
 
 // Public share route

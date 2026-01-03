@@ -103,6 +103,17 @@ fetch('/api/user')
     .then(async user => {
         currentUser = user;
         console.log('Logged in as:', user.email);
+        console.log('Registered devices:', user.registeredDevices);
+        
+        // Check if user has registered devices
+        if (!user.registeredDevices || user.registeredDevices.length === 0) {
+            // Redirect to register device if no devices registered
+            if (window.location.pathname === '/tracker') {
+                alert('Please register this device first to use Find Device feature.');
+                window.location.href = '/register-device';
+                return;
+            }
+        }
         
         // Initialize encryption key for this user
         encryptionKey = await encryption.getOrCreateKey(currentUser.id);
@@ -116,13 +127,21 @@ fetch('/api/user')
     });
 
 async function initializeDevice() {
-    // Auto-detect device if not set
-    if (!deviceName) {
+    // Check if device is registered by matching fingerprint
+    const userAgent = navigator.userAgent;
+    const registeredDevice = currentUser.registeredDevices?.find(d => d.fingerprint === userAgent);
+    
+    // Auto-detect device if not set or use registered device name
+    if (registeredDevice) {
+        deviceName = registeredDevice.name;
+        console.log(`📱 Using registered device: ${deviceName}`);
+    } else if (!deviceName) {
         const detectedDevice = detectDevice();
         deviceName = detectedDevice.name;
-        localStorage.setItem('deviceName', deviceName);
         console.log(`📱 Auto-detected: ${deviceName}`);
     }
+    
+    localStorage.setItem('deviceName', deviceName);
 
     // Get device information
     async function getDeviceInfo() {
@@ -440,10 +459,26 @@ function updateDeviceList() {
     const list = document.getElementById('device-list');
     list.innerHTML = '';
     
-    devices.forEach((device, id) => {
+    // Only show devices belonging to current user
+    const userDevices = Array.from(devices.values()).filter(d => d.userId === currentUser.id);
+    
+    if (userDevices.length === 0) {
+        list.innerHTML = `
+            <div style="padding: 20px; text-align: center; color: #5f6368;">
+                <i class="material-icons" style="font-size: 48px; color: #dadce0; margin-bottom: 12px;">devices</i>
+                <p style="margin-bottom: 16px;">No devices online</p>
+                <a href="/register-device" style="display: inline-block; padding: 10px 20px; background: #1a73e8; color: white; text-decoration: none; border-radius: 8px; font-size: 14px;">
+                    Register Another Device
+                </a>
+            </div>
+        `;
+        return;
+    }
+    
+    userDevices.forEach((device, index) => {
         const item = document.createElement('div');
         item.className = 'device-item';
-        if (id === selectedDeviceId) {
+        if (device.id === selectedDeviceId) {
             item.classList.add('selected');
         }
         
@@ -456,18 +491,26 @@ function updateDeviceList() {
         // Battery info
         const batteryPercent = device.battery !== null ? `${device.battery}%` : '';
         
+        // Mark current device
+        const isCurrentDevice = device.id === socket.id;
+        
         item.innerHTML = `
             <div class="device-icon">${deviceIcon}</div>
             <div class="device-item-info">
-                <div class="device-item-name">${device.name}</div>
+                <div class="device-item-name">${device.name}${isCurrentDevice ? ' (This device)' : ''}</div>
                 <div class="device-item-status">Last seen ${timeAgo}</div>
                 ${device.battery !== null ? `<div class="device-item-battery">${batteryPercent}</div>` : ''}
             </div>
         `;
         
-        item.onclick = () => selectDevice(id);
+        item.onclick = () => selectDevice(device.id);
         list.appendChild(item);
     });
+    
+    // Auto-select first device if none selected
+    if (!selectedDeviceId && userDevices.length > 0) {
+        selectDevice(userDevices[0].id);
+    }
 }
 
 function selectDevice(deviceId) {

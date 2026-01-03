@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Find Hub - Find My Device</title>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 450px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .logo img {
+            width: 48px;
+            height: 48px;
+        }
+
+        .logo h1 {
+            font-size: 32px;
+            font-weight: 400;
+            color: white;
+            margin: 0;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 8px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            font-size: 24px;
+            font-weight: 400;
+            color: #202124;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .option-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px;
+            background: white;
+            border: 2px solid #dadce0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 16px;
+            text-decoration: none;
+            color: #202124;
+        }
+
+        .option-btn:hover {
+            border-color: #1a73e8;
+            background: #f8f9fa;
+            box-shadow: 0 2px 8px rgba(26, 115, 232, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .option-btn .icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .option-btn .icon i {
+            font-size: 28px;
+            color: white;
+        }
+
+        .option-btn .text {
+            flex: 1;
+            text-align: left;
+        }
+
+        .option-btn .text h3 {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .option-btn .text p {
+            font-size: 14px;
+            color: #5f6368;
+            margin: 0;
+        }
+
+        .option-btn .arrow {
+            color: #5f6368;
+            font-size: 24px;
+        }
+
+        .footer {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+        }
+
+        .footer a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        @media (max-width: 480px) {
+            .card {
+                padding: 24px;
+            }
+
+            .logo h1 {
+                font-size: 28px;
+            }
+
+            .option-btn {
+                padding: 16px;
+            }
+
+            .option-btn .icon {
+                width: 40px;
+                height: 40px;
+            }
+
+            .option-btn .icon i {
+                font-size: 24px;
+            }
+
+            .option-btn .text h3 {
+                font-size: 16px;
+            }
+
+            .option-btn .text p {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <img src="https://www.google.com/images/branding/product/2x/find_my_device_48dp.png" alt="Find Hub">
+                <h1>Find Hub</h1>
+            </div>
+            <p class="subtitle">Keep track of all your devices</p>
+        </div>
+
+        <div class="card">
+            <h2>Choose an option</h2>
+            
+            <a href="/register-device" class="option-btn">
+                <div class="icon">
+                    <i class="material-icons">add_circle</i>
+                </div>
+                <div class="text">
+                    <h3>Register Device</h3>
+                    <p>Add this device to your account</p>
+                </div>
+                <i class="material-icons arrow">chevron_right</i>
+            </a>
+
+            <a href="/find-device" class="option-btn">
+                <div class="icon">
+                    <i class="material-icons">location_searching</i>
+                </div>
+                <div class="text">
+                    <h3>Find Device</h3>
+                    <p>Locate your registered devices</p>
+                </div>
+                <i class="material-icons arrow">chevron_right</i>
+            </a>
+        </div>
+
+        <div class="footer">
+            <p>Secure · Encrypted · Private</p>
+        </div>
+    </div>
+</body>
+</html>
