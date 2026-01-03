@@ -15,9 +15,11 @@
    - Add the following:
      ```
      Key: ADMIN_PASSWORD
-     Value: Althaf@Ali230912
+     Value: [YOUR-SECURE-PASSWORD-HERE]
      ```
-     (Or use a different secure password)
+     **Important:** Use a strong, unique password. Consider generating one using:
+     - Password manager (recommended)
+     - Command: `openssl rand -base64 32` (if you have OpenSSL)
 
 4. **Save Changes**
    - Click **"Save Changes"**
@@ -31,7 +33,7 @@ After deployment completes:
    - URL: https://realtime-device-tracker-s9ua.onrender.com/admin
 
 2. **Login**
-   - Enter your admin password: `Althaf@Ali230912`
+   - Enter your admin password (the one you set in Render environment variables)
    - Click **"Login"**
 
 ## What You'll See
