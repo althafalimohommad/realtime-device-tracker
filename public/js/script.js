@@ -128,17 +128,24 @@ fetch('/api/user')
         const userAgent = navigator.userAgent;
         const isThisDeviceRegistered = currentUser.registeredDevices.some(d => d.fingerprint === userAgent);
         
+        // Always load and show registered devices first
+        loadRegisteredDevicesLocations();
+        
         if (!isThisDeviceRegistered && window.location.pathname === '/tracker') {
-            if (confirm('This device is not registered. Would you like to register it now?')) {
-                window.location.href = '/register-device';
-                return;
-            }
+            const hasOtherDevices = currentUser.registeredDevices && currentUser.registeredDevices.length > 0;
+            const message = hasOtherDevices 
+                ? `This device is not registered yet.\n\nYou have ${currentUser.registeredDevices.length} other registered device(s) that you can track.\n\nWould you like to register this device as well?`
+                : 'This device is not registered. Would you like to register it now?';
+            
+            // Delay the prompt to allow map to load first
+            setTimeout(() => {
+                if (confirm(message)) {
+                    window.location.href = '/register-device';
+                }
+            }, 1000);
         }
         
         initializeDevice();
-        
-        // Load registered devices from database and show their locations
-        loadRegisteredDevicesLocations();
     })
     .catch(err => {
         console.error('Not authenticated:', err);
