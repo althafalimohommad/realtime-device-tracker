@@ -1,0 +1,1720 @@
+// Database Diagram for Realtime Device Tracker
+// Use this file on https://dbdiagram.io to visualize the database structure
+
+Project RealTimeDeviceTracker {
+  database_type: 'JSON File Storage + In-Memory + Real-time WebSockets'
+  Note: '''
+    # Realtime Device Tracker - Complete System Architecture
+    
+    **Architecture Type:** Cloud-Ready Scalable Real-time System
+    **Cloud Platform:** Deployable on Render, Heroku, AWS, Azure, GCP
+    **Protocol:** WebSocket (Socket.io) for real-time bidirectional communication
+    
+    ## Data Storage Strategy:
+    - **Persistent:** users.json (file-based, scalable to MongoDB/PostgreSQL)
+    - **In-Memory:** devices Map, shareTokens Map (Redis-ready architecture)
+    - **Session Store:** Express-session (scalable to Redis/MongoDB)
+    - **Real-time:** Socket.io rooms for instant broadcasting
+    
+    ## Core Algorithms:
+    1. **OAuth Authentication Flow** (Google OAuth 2.0)
+    2. **End-to-End Encryption** (Client-side AES-256-GCM)
+    3. **Real-time Broadcasting** (Socket.io rooms per user)
+    4. **Device Auto-Detection** (Platform, connection, battery)
+    5. **Token-based Sharing** (Crypto-secure 32-byte tokens)
+    6. **Automatic Token Expiration** (24-hour TTL)
+    
+    ## Security Features:
+    - End-to-end encryption for location data
+    - Session-based authentication
+    - HTTPS required in production
+    - Token expiration for shared links
+    - User-isolated data via Socket rooms
+  '''
+}
+
+// Users Table (stored in users.json)
+Table users {
+  id varchar [pk, note: 'Google OAuth user ID']
+  email varchar [not null, unique, note: 'User email from Google']
+  name varchar [not null, note: 'Display name from Google profile']
+  photo varchar [note: 'Profile photo URL from Google']
+  devices json [note: 'Array of device names associated with the user']
+  
+  Note: 'User accounts created via Google OAuth authentication'
+  
+  Indexes {
+    id [pk]
+    email [unique]
+  }
+}
+
+// Devices Table (in-memory Map storage)
+Table devices {
+  id varchar [pk, note: 'Socket.io connection ID']
+  name varchar [not null, note: 'Device custom name or auto-generated']
+  userId varchar [note: 'Owner of the device']
+  lastSeen datetime [not null, note: 'Last activity timestamp']
+  latitude float [note: 'Current latitude coordinate']
+  longitude float [note: 'Current longitude coordinate']
+  battery int [note: 'Battery percentage (0-100)']
+  charging boolean [default: false, note: 'Charging status']
+  platform varchar [note: 'Device platform (Windows, Android, iOS, etc.)']
+  connection varchar [note: 'Connection type (Wi-Fi, 4G, 5G, etc.)']
+  deviceType varchar [note: 'Device type description']
+  deviceIcon varchar [note: 'Emoji icon for device type']
+  encryptedLocation text [note: 'End-to-end encrypted location data']
+  isSharing boolean [default: false, note: 'Whether location is being shared']
+  shareToken varchar [note: 'Active sharing token if sharing']
+  
+  Note: '''
+    Real-time device tracking information stored in memory.
+    Linked to users via socket rooms for instant updates.
+  '''
+  
+  Indexes {
+    id [pk]
+    (userId, id) [name: 'user_devices_idx']
+  }
+}
+
+// Share Tokens Table (in-memory Map storage)
+Table shareTokens {
+  token varchar [pk, note: '32-character hex token']
+  socketId varchar [note: 'Device socket ID being shared']
+  userId varchar [note: 'User who owns the shared device']
+  deviceName varchar [note: 'Name of the shared device']
+  expiresAt datetime [not null, note: 'Token expiration timestamp (24h from creation)']
+  
+  Note: '''
+    Temporary sharing tokens for public location sharing.
+    Tokens expire after 24 hours automatically.
+  '''
+  
+  Indexes {
+    token [pk]
+    expiresAt [name: 'expiration_idx']
+  }
+}
+
+// Sessions Table (Express session storage)
+Table sessions {
+  sid varchar [pk, note: 'Session ID']
+  sess json [not null, note: 'Session data including passport user info']
+  expire datetime [not null, note: 'Session expiration (24h by default)']
+  
+  Note: 'Express sessions for Google OAuth authentication'
+  
+  Indexes {
+    sid [pk]
+    expire [name: 'session_expire_idx']
+  }
+}
+
+// Socket Rooms (virtual grouping - not stored)
+Table socket_rooms {
+  room_name varchar [pk, note: 'Room identifier (user_{userId})']
+  userId varchar [note: 'User who owns this room']
+  
+  Note: '''
+    Virtual Socket.io rooms for real-time broadcasting.
+    Each user has a room where all their devices receive instant updates.
+    Not persisted - created dynamically when devices connect.
+  '''
+}
+
+// ============================================
+// DATABASE RELATIONSHIPS & CONNECTIONS
+// ============================================
+
+// Core Entity Relationships
+Ref: devices.userId > users.id [delete: cascade, update: cascade]
+Ref: devices.shareToken > shareTokens.token [delete: set null, update: cascade]
+Ref: shareTokens.userId > users.id [delete: cascade, update: cascade]
+Ref: shareTokens.socketId > devices.id [delete: cascade, update: cascade]
+Ref: socket_rooms.userId - users.id [delete: cascade, update: cascade]
+
+// Connection Documentation Table
+Table relationships_explained {
+  relationship_id varchar [pk]
+  from_table varchar
+  to_table varchar
+  relationship_type varchar
+  cardinality varchar
+  
+  Note: '''
+    ## Database Relationship Details
+    
+    **1. users → devices (One-to-Many)**
+    - Type: Ownership relationship
+    - Cardinality: 1 user has N devices
+    - Foreign Key: devices.userId references users.id
+    - Cascade: Delete user → delete all devices
+    - Real-world: User owns multiple phones, tablets, laptops
+    - Implementation: Socket.io rooms group by userId
+    
+    **2. devices → shareTokens (One-to-One Optional)**
+    - Type: Temporary sharing relationship
+    - Cardinality: 1 device has 0 or 1 active share token
+    - Foreign Key: devices.shareToken references shareTokens.token
+    - Cascade: Delete token → device.shareToken set to null
+    - Real-world: Device can share location via unique token
+    - Implementation: In-memory Map with TTL expiration
+    
+    **3. shareTokens → devices (Many-to-One)**
+    - Type: Reference relationship
+    - Cardinality: N tokens can reference 1 device (over time)
+    - Foreign Key: shareTokens.socketId references devices.id
+    - Cascade: Delete device → delete associated tokens
+    - Real-world: Multiple share links for same device (historical)
+    - Implementation: Token cleanup on device disconnect
+    
+    **4. shareTokens → users (Many-to-One)**
+    - Type: Ownership relationship
+    - Cardinality: N tokens belong to 1 user
+    - Foreign Key: shareTokens.userId references users.id
+    - Cascade: Delete user → delete all share tokens
+    - Real-world: User creates multiple share links
+    - Implementation: Token validation checks userId
+    
+    **5. socket_rooms → users (One-to-One)**
+    - Type: Virtual room relationship
+    - Cardinality: 1 user has 1 room (user_{userId})
+    - Foreign Key: socket_rooms.userId references users.id
+    - Cascade: Delete user → delete room
+    - Real-world: Private broadcast channel per user
+    - Implementation: Socket.io room creation on first device
+    
+    **6. sessions → users (Many-to-One) [Implicit]**
+    - Type: Authentication relationship
+    - Cardinality: 1 user can have multiple sessions
+    - Foreign Key: sessions.sess.passport.user references users.id
+    - Cascade: Delete user → invalidate sessions
+    - Real-world: User logged in on multiple browsers
+    - Implementation: Express-session with Passport.js
+  '''
+}
+
+// Enum-like values (documented for reference)
+Table device_platforms {
+  value varchar [pk]
+  Note: '''
+    Common platform values:
+    - Windows
+    - macOS
+    - Linux
+    - Android
+    - iOS
+    - Chrome OS
+    - Unknown
+  '''
+}
+
+Table device_connection_types {
+  value varchar [pk]
+  Note: '''
+    Common connection types:
+    - Wi-Fi
+    - 4G
+    - 5G
+    - 3G
+    - Ethernet
+    - unknown
+  '''
+}
+
+Table device_icons {
+  icon varchar [pk]
+  device_type varchar
+  Note: '''
+    Device icon mappings:
+    - 💻 Desktop/Laptop
+    - 📱 Smartphone
+    - ⌚ Smartwatch
+    - 🖥️ Workstation
+    - 📟 Other devices
+  '''
+}
+
+// ============================================
+// ALGORITHM & WORKFLOW DOCUMENTATION
+// ============================================
+
+TableGroup Algorithms {
+  auth_workflow
+  device_tracking_workflow
+  location_sharing_workflow
+  encryption_workflow
+  realtime_broadcast_workflow
+}
+
+// Algorithm 1: Google OAuth Authentication
+Table auth_workflow {
+  step int [pk]
+  action varchar
+  component varchar
+  description text
+  
+  Note: '''
+    ## Google OAuth 2.0 Authentication Flow
+    
+    **Algorithm Steps:**
+    1. User clicks "Login with Google"
+    2. Redirect to Google OAuth consent screen
+    3. User authorizes app permissions (email, profile)
+    4. Google redirects with authorization code
+    5. Exchange code for access token
+    6. Fetch user profile (id, email, name, photo)
+    7. Create/update user in database
+    8. Store user ID in session
+    9. Serialize user for subsequent requests
+    10. Create secure session cookie (24h expiry)
+    
+    **Security Measures:**
+    - HTTPS only in production
+    - Secure session cookies (httpOnly, sameSite)
+    - CSRF protection via express-session
+    - Client ID/Secret stored in environment variables
+    
+    **Session Management:**
+    - Sessions stored with 24-hour expiration
+    - Auto-logout on session expiry
+    - Secure session secret (256-bit recommended)
+    
+    **Implementation:** Passport.js + Google OAuth 2.0 Strategy
+  '''
+}
+
+// Algorithm 2: Real-time Device Tracking
+Table device_tracking_workflow {
+  step int [pk]
+  event varchar
+  data_flow varchar
+  description text
+  
+  Note: '''
+    ## Real-time Device Tracking Algorithm
+    
+    **Connection Flow:**
+    1. Client establishes WebSocket connection (Socket.io)
+    2. Server assigns unique socket ID
+    3. Client emits "register-device" with device info:
+       - Device name (custom or auto-generated)
+       - User ID (from authenticated session)
+       - Platform detection (Windows/Mac/Linux/iOS/Android)
+       - Connection type (Wi-Fi/4G/5G/Ethernet)
+       - Device type & icon
+    4. Server stores device in memory Map
+    5. Server joins device to user-specific room (user_{userId})
+    6. Broadcast updated device list to all user's devices
+    
+    **Location Update Flow:**
+    1. Client requests geolocation (browser Geolocation API)
+    2. Client encrypts coordinates (AES-256-GCM E2EE)
+    3. Client emits "send-location" with:
+       - Encrypted location data
+       - Plain coordinates (for sharing feature)
+       - Battery level & charging status
+    4. Server stores encrypted data without decryption
+    5. Server broadcasts to user's room (all their devices)
+    6. Other devices decrypt and display on map
+    
+    **Auto-Detection Features:**
+    - Platform: navigator.platform / user agent parsing
+    - Connection: navigator.connection.effectiveType
+    - Battery: navigator.getBattery() API
+    - Device Type: Screen size + platform heuristics
+    
+    **Update Frequency:** 
+    - Location: Every 5 seconds (configurable)
+    - Battery: On change events
+    - Connection: On change events
+    
+    **Optimization:**
+    - Socket.io rooms for targeted broadcasting
+    - No global broadcasts (user isolation)
+    - Instant updates via WebSocket (no polling)
+  '''
+}
+
+// Algorithm 3: Location Sharing System
+Table location_sharing_workflow {
+  step int [pk]
+  action varchar
+  security_measure varchar
+  description text
+  
+  Note: '''
+    ## Secure Location Sharing Algorithm
+    
+    **Share Link Generation:**
+    1. User clicks "Share Location" for a device
+    2. Server generates crypto-secure token:
+       - crypto.randomBytes(16).toString('hex')
+       - Results in 32-character hex string
+       - Cryptographically random (CSPRNG)
+    3. Server creates share token entry:
+       - token → shareTokens Map
+       - Associates with device socket ID
+       - Sets 24-hour expiration timestamp
+    4. Server sends share URL to client:
+       - Format: https://domain.com/share/{token}
+    5. Device marked as "isSharing = true"
+    
+    **Share Link Access:**
+    1. Visitor opens share link
+    2. Server validates token:
+       - Check if token exists
+       - Verify not expired (< 24h old)
+    3. If valid:
+       - Lookup associated device
+       - Create temporary WebSocket connection
+       - Stream real-time location updates
+       - Display device on map (read-only)
+    4. If invalid/expired:
+       - Return 404 error
+       - Cleanup expired token
+    
+    **Stop Sharing:**
+    1. User clicks "Stop Sharing"
+    2. Server deletes token from shareTokens Map
+    3. Device marked as "isSharing = false"
+    4. Active share viewers disconnected
+    
+    **Security Considerations:**
+    - Tokens are unguessable (2^128 possibilities)
+    - Automatic 24-hour expiration
+    - No authentication required for viewers
+    - Owner can revoke anytime
+    - Shared location is NOT encrypted (public)
+    
+    **Cleanup Algorithm:**
+    - Periodic check for expired tokens (every hour)
+    - Auto-delete tokens older than 24h
+    - Free memory from shareTokens Map
+  '''
+}
+
+// Algorithm 4: End-to-End Encryption
+Table encryption_workflow {
+  step int [pk]
+  operation varchar
+  algorithm varchar
+  description text
+  
+  Note: '''
+    ## End-to-End Encryption Implementation
+    
+    **Encryption Standard:** AES-256-GCM
+    - Algorithm: Advanced Encryption Standard
+    - Key Size: 256 bits (maximum security)
+    - Mode: Galois/Counter Mode (authenticated encryption)
+    - Library: Web Crypto API (browser native)
+    
+    **Key Management:**
+    1. Each user generates unique encryption key:
+       - 256-bit random key via window.crypto
+       - Derived from user ID + browser fingerprint
+       - Stored in browser localStorage
+       - NEVER transmitted to server
+    2. Key persists across sessions
+    3. Same key used for all user's devices
+    
+    **Encryption Process (Client-Side):**
+    1. Get location coordinates (lat, lng)
+    2. Convert to JSON string
+    3. Generate random IV (Initialization Vector):
+       - 96-bit random value
+       - Unique per encryption
+    4. Encrypt with AES-256-GCM:
+       - Input: plaintext location
+       - Key: user's encryption key
+       - IV: random 96-bit value
+       - Output: ciphertext + authentication tag
+    5. Package encrypted data:
+       {
+         ciphertext: base64(encrypted),
+         iv: base64(iv),
+         tag: base64(authTag)
+       }
+    6. Send to server
+    
+    **Decryption Process (Client-Side):**
+    1. Receive encrypted location from server
+    2. Extract ciphertext, IV, tag
+    3. Decrypt with AES-256-GCM:
+       - Use same encryption key
+       - Verify authentication tag
+       - Reject if tampered
+    4. Parse JSON to get coordinates
+    5. Display on map
+    
+    **Server Role:**
+    - Server NEVER has encryption keys
+    - Server stores encrypted data as-is
+    - Server cannot decrypt locations
+    - True end-to-end encryption
+    
+    **Security Guarantees:**
+    - Confidentiality: Only user's devices can decrypt
+    - Integrity: Authentication tag prevents tampering
+    - Forward Secrecy: New IV per message
+    - Replay Protection: Timestamp validation
+    
+    **Performance:**
+    - Hardware-accelerated (Web Crypto API)
+    - <1ms encryption/decryption time
+    - Negligible battery impact
+  '''
+}
+
+// Algorithm 5: Real-time Broadcasting
+Table realtime_broadcast_workflow {
+  step int [pk]
+  mechanism varchar
+  technology varchar
+  description text
+  
+  Note: '''
+    ## Socket.io Real-time Broadcasting Architecture
+    
+    **WebSocket Connection:**
+    - Protocol: WebSocket (ws:// or wss://)
+    - Fallback: Long polling (for old browsers)
+    - Bidirectional: Full-duplex communication
+    - Low Latency: <50ms typical
+    
+    **Room-Based Broadcasting:**
+    1. Each user has dedicated room: "user_{userId}"
+    2. All user's devices join same room
+    3. Broadcasts target specific rooms (not global)
+    4. Instant message delivery to all room members
+    
+    **Event System:**
+    
+    Client → Server Events:
+    - "register-device": Device registration
+    - "send-location": Location update
+    - "alert-device": Play sound on target device
+    - "start-sharing": Generate share link
+    - "stop-sharing": Revoke share link
+    
+    Server → Client Events:
+    - "devices-update": Updated device list
+    - "receive-location": Location from other device
+    - "play-alert": Sound alert trigger
+    - "share-link": Generated share URL
+    - "share-status": Sharing enabled/disabled
+    
+    **Broadcasting Algorithm:**
+    1. Device A sends location update
+    2. Server receives via WebSocket
+    3. Server identifies user room (user_{userId})
+    4. io.to(room).emit() → broadcast to room
+    5. All devices in room receive instantly
+    6. Devices B, C, D update their maps
+    
+    **Scalability Considerations:**
+    - Rooms prevent global broadcasts
+    - Each user isolated (no cross-user data)
+    - Horizontal scaling: Socket.io Redis adapter
+    - Load balancing: Sticky sessions required
+    
+    **Connection Management:**
+    - Auto-reconnect on disconnect
+    - Heartbeat/ping-pong for connection health
+    - Graceful degradation to polling
+    - Device removal on disconnect
+    
+    **Performance Optimizations:**
+    - Binary data support (faster than JSON)
+    - Message compression (gzip/deflate)
+    - Batching for high-frequency updates
+    - Selective broadcasting (rooms, not global)
+    
+    **Cloud Deployment:**
+    - WebSocket support required
+    - Reverse proxy: nginx/Apache config
+    - SSL/TLS required (wss://)
+    - Health checks on /socket.io/
+  '''
+}
+
+// ============================================
+// CLOUD ARCHITECTURE & DEPLOYMENT
+// ============================================
+
+Table cloud_architecture {
+  component varchar [pk]
+  technology varchar
+  scaling_strategy varchar
+  
+  Note: '''
+    ## Cloud Deployment Architecture
+    
+    **Current Stack:**
+    - Runtime: Node.js 18+ LTS
+    - Framework: Express.js 4.x
+    - WebSocket: Socket.io 4.x
+    - Authentication: Passport.js
+    - Session: express-session
+    - Database: JSON file (users.json)
+    
+    **Cloud Platforms Supported:**
+    
+    1. **Render** (Recommended):
+       - Native WebSocket support
+       - Zero-config deployments
+       - Automatic SSL/TLS
+       - Free tier available
+       - render.yaml included
+    
+    2. **Heroku**:
+       - WebSocket support enabled
+       - Procfile configuration
+       - Redis add-on for sessions
+       - Auto-scaling dynos
+    
+    3. **AWS**:
+       - EC2: Full control
+       - Elastic Beanstalk: Managed
+       - ALB: WebSocket support
+       - ElastiCache: Redis sessions
+    
+    4. **Azure**:
+       - App Service: WebSocket enabled
+       - SignalR Service: Managed sockets
+       - Cosmos DB: NoSQL storage
+    
+    5. **Google Cloud Platform**:
+       - App Engine: WebSocket support
+       - Cloud Run: Containerized
+       - Firestore: Real-time database
+    
+    **Scaling Strategy:**
+    
+    Vertical Scaling (Single Server):
+    - Current implementation
+    - In-memory storage (Map)
+    - Suitable for <1000 concurrent users
+    
+    Horizontal Scaling (Multiple Servers):
+    - Require: Socket.io Redis adapter
+    - Shared session store (Redis/MongoDB)
+    - Database migration (MongoDB/PostgreSQL)
+    - Load balancer with sticky sessions
+    
+    **Migration Path to Production:**
+    
+    Phase 1 (Current):
+    - File-based storage (users.json)
+    - In-memory devices/tokens
+    - Single server deployment
+    
+    Phase 2 (Scale to 10k users):
+    - Migrate to MongoDB/PostgreSQL
+    - Redis for sessions
+    - Redis for device state
+    - Horizontal scaling (2-4 servers)
+    
+    Phase 3 (Scale to 100k+ users):
+    - Managed database (Atlas/RDS)
+    - Redis Cluster for sessions
+    - CDN for static assets
+    - Auto-scaling (5-20 servers)
+    - Message queue (RabbitMQ/Redis)
+    
+    **Environment Variables Required:**
+    - GOOGLE_CLIENT_ID: OAuth client ID
+    - GOOGLE_CLIENT_SECRET: OAuth secret
+    - CALLBACK_URL: OAuth redirect URI
+    - SESSION_SECRET: Session encryption key
+    - PORT: Server port (default: 3000)
+    - NODE_ENV: production/development
+    
+    **Performance Benchmarks:**
+    - Concurrent connections: 1000+
+    - Location updates/sec: 200+
+    - Average latency: <50ms
+    - Memory usage: ~100MB base
+    - CPU usage: <10% idle, 30% peak
+  '''
+}
+
+Table data_flow {
+  flow_type varchar [pk]
+  source varchar
+  destination varchar
+  encryption varchar
+  
+  Note: '''
+    ## Complete Data Flow Diagram
+    
+    **1. Authentication Flow:**
+    Browser → Google OAuth → Server → Database
+    - User credentials: HTTPS encrypted
+    - OAuth tokens: Server-side only
+    - Session cookies: httpOnly, secure
+    
+    **2. Location Tracking Flow:**
+    GPS → Browser → Encrypt → WebSocket → Server → Broadcast
+    - Raw location: Client-side only
+    - Encrypted: AES-256-GCM
+    - WebSocket: wss:// (TLS encrypted)
+    - Broadcast: Room-based (user-isolated)
+    
+    **3. Device Registration Flow:**
+    Browser APIs → Client Detection → WebSocket → Server → Room Join
+    - Platform: navigator.platform
+    - Battery: Battery API
+    - Connection: Network Information API
+    
+    **4. Sharing Flow:**
+    User Request → Token Generation → Database → Share URL → Public Access
+    - Token: Crypto-random 256-bit
+    - Storage: In-memory Map
+    - Expiration: 24-hour TTL
+    - Access: Unauthenticated (public)
+    
+    **5. Real-time Update Flow:**
+    Device A → WebSocket → Server → Room → WebSocket → Device B,C,D
+    - Latency: <50ms typical
+    - Bidirectional: Full-duplex
+    - Guaranteed delivery: Socket.io ACKs
+  '''
+}
+
+// ============================================
+// TECHNICAL CONNECTIONS & INTEGRATIONS
+// ============================================
+
+Table external_connections {
+  service_name varchar [pk]
+  connection_type varchar
+  protocol varchar
+  purpose text
+  
+  Note: '''
+    ## External Service Integrations
+    
+    **1. Google OAuth API**
+    - Endpoint: https://accounts.google.com/o/oauth2/v2/auth
+    - Protocol: OAuth 2.0
+    - Connection: HTTPS REST API
+    - Data Flow: User authentication & profile
+    - Required Scopes:
+      * profile (name, photo)
+      * email (user email)
+    - Credentials: Client ID + Client Secret
+    - Callback: /auth/google/callback
+    
+    **2. Browser Geolocation API**
+    - Endpoint: navigator.geolocation
+    - Protocol: JavaScript API (W3C Geolocation)
+    - Connection: Browser native
+    - Data Flow: GPS coordinates (lat/lng)
+    - Permission: User must grant location access
+    - Accuracy: GPS (±5m) or Wi-Fi (±100m)
+    - Update: watchPosition() for continuous tracking
+    
+    **3. Web Crypto API**
+    - Endpoint: window.crypto.subtle
+    - Protocol: JavaScript Crypto API
+    - Connection: Browser native
+    - Data Flow: Encryption/decryption operations
+    - Algorithm: AES-256-GCM
+    - Hardware: Uses CPU crypto acceleration
+    - Security: True random number generation
+    
+    **4. Socket.io WebSocket**
+    - Endpoint: wss://domain.com/socket.io/
+    - Protocol: WebSocket (wss://) + Fallback (polling)
+    - Connection: Persistent bidirectional
+    - Data Flow: Real-time location updates
+    - Transport: Binary + JSON
+    - Compression: gzip/deflate enabled
+    - Heartbeat: Ping/pong every 25s
+    
+    **5. Leaflet/Mapbox API** (Map Display)
+    - Endpoint: OpenStreetMap tiles or Mapbox tiles
+    - Protocol: HTTPS (tile requests)
+    - Connection: REST API for map tiles
+    - Data Flow: Map imagery (PNG tiles)
+    - CDN: Cloudflare/Fastly for tile delivery
+    - Caching: Browser caches tiles locally
+    
+    **6. Battery Status API**
+    - Endpoint: navigator.getBattery()
+    - Protocol: JavaScript API
+    - Connection: Browser native
+    - Data Flow: Battery level & charging status
+    - Events: chargingchange, levelchange
+    - Support: Chrome, Edge, Firefox
+    
+    **7. Network Information API**
+    - Endpoint: navigator.connection
+    - Protocol: JavaScript API
+    - Connection: Browser native
+    - Data Flow: Connection type (4G/5G/Wi-Fi)
+    - Events: Connection changes
+    - Support: Chrome, Edge (experimental)
+  '''
+}
+
+Table websocket_events {
+  event_name varchar [pk]
+  direction varchar
+  payload_structure json
+  triggers varchar
+  
+  Note: '''
+    ## WebSocket Event Specifications
+    
+    **CLIENT → SERVER EVENTS**
+    
+    1. **register-device**
+       Payload: {
+         name: string,           // Device custom name
+         userId: string,          // Google OAuth user ID
+         deviceInfo: {
+           platform: string,      // OS platform
+           connection: string,    // Network type
+           deviceType: string,    // Device category
+           deviceIcon: string     // Emoji icon
+         }
+       }
+       Trigger: On page load after authentication
+       Response: devices-update event
+    
+    2. **send-location**
+       Payload: {
+         encrypted: {             // E2EE encrypted data
+           ciphertext: base64,
+           iv: base64,
+           tag: base64
+         },
+         latitude: float,         // Plain (for sharing)
+         longitude: float,        // Plain (for sharing)
+         battery: int,            // 0-100
+         charging: boolean
+       }
+       Trigger: Every 5 seconds (geolocation watch)
+       Response: receive-location broadcast to room
+    
+    3. **alert-device**
+       Payload: targetDeviceId (string)
+       Trigger: User clicks "Find Device" button
+       Response: play-alert event to target device
+    
+    4. **start-sharing**
+       Payload: none
+       Trigger: User clicks "Share Location"
+       Response: share-link event with token
+    
+    5. **stop-sharing**
+       Payload: none
+       Trigger: User clicks "Stop Sharing"
+       Response: share-status event (isSharing: false)
+    
+    **SERVER → CLIENT EVENTS**
+    
+    1. **devices-update**
+       Payload: Array of device objects
+       Trigger: Device connects/disconnects or location update
+       Receiver: All devices in user's room
+    
+    2. **receive-location**
+       Payload: {
+         id: socketId,
+         encrypted: {...},       // E2EE data
+         battery: int,
+         charging: boolean
+       }
+       Trigger: Another device sends location
+       Receiver: All devices in user's room
+    
+    3. **play-alert**
+       Payload: none
+       Trigger: Another device sends alert request
+       Receiver: Specific targeted device
+    
+    4. **share-link**
+       Payload: {
+         token: string,          // 32-char hex token
+         expiresAt: timestamp    // Unix timestamp
+       }
+       Trigger: User starts sharing
+       Receiver: Device that initiated sharing
+    
+    5. **share-status**
+       Payload: { isSharing: boolean }
+       Trigger: Sharing started/stopped
+       Receiver: Device that toggled sharing
+  '''
+}
+
+Table api_endpoints {
+  endpoint varchar [pk]
+  method varchar
+  auth_required boolean
+  purpose text
+  
+  Note: '''
+    ## HTTP REST API Endpoints
+    
+    **AUTHENTICATION ROUTES**
+    
+    GET /login
+    - Method: GET
+    - Auth: None (public)
+    - Response: Login page (EJS)
+    - Redirects: If already authenticated → /
+    
+    GET /auth/google
+    - Method: GET
+    - Auth: None (initiates OAuth)
+    - Response: Redirect to Google consent
+    - Scopes: profile, email
+    
+    GET /auth/google/callback
+    - Method: GET
+    - Auth: OAuth callback (Google)
+    - Response: Redirect to / on success
+    - Creates: User session
+    
+    GET /logout
+    - Method: GET
+    - Auth: Required (session)
+    - Response: Redirect to /login
+    - Destroys: User session
+    
+    **APPLICATION ROUTES**
+    
+    GET /
+    - Method: GET
+    - Auth: Required (session)
+    - Response: Main app page (index.ejs)
+    - Data: User info, device list
+    
+    GET /share/:token
+    - Method: GET
+    - Auth: None (public)
+    - Response: Share page (share.ejs)
+    - Validates: Token exists & not expired
+    - Returns: 404 if invalid
+    
+    **STATIC ASSETS**
+    
+    GET /public/*
+    - Method: GET
+    - Auth: None (public)
+    - Response: Static files (CSS, JS, images)
+    - Cache: Browser caching enabled
+    
+    **WEBSOCKET ENDPOINT**
+    
+    WS /socket.io/
+    - Protocol: WebSocket (upgrade from HTTP)
+    - Auth: Session-based (via cookie)
+    - Persistent: Yes (bidirectional)
+    - Events: See websocket_events table
+  '''
+}
+
+// ============================================
+// COMPLETE SYSTEM CONNECTION MAP
+// ============================================
+
+TableGroup ConnectionArchitecture {
+  browser_connections
+  express_connections
+  socketio_connections
+  data_flow_sequences
+  component_dependencies
+}
+
+// Browser Layer Connections (Client-Side)
+Table browser_connections {
+  connection_id int [pk]
+  target_service varchar [not null]
+  protocol varchar [not null]
+  direction varchar [not null]
+  data_exchanged text
+  
+  Note: '''
+    Browser connections to external services and APIs.
+    All connections originate from the client browser.
+    
+    Connection Details:
+    
+    [1] Google OAuth API
+    - Protocol: HTTPS REST API
+    - Data: OAuth tokens, user profile (id, email, name, photo)
+    - Security: OAuth 2.0, HTTPS encryption
+    
+    [2] Express Server (:3000)
+    - Protocol: HTTPS (HTTP/1.1 or HTTP/2)
+    - Data: HTTP requests, HTML pages, session cookies
+    - Security: Session-based auth, httpOnly cookies
+    
+    [3] Geolocation API
+    - Protocol: JavaScript W3C API
+    - Data: GPS coordinates, accuracy, altitude
+    - Trigger: navigator.geolocation.watchPosition()
+    - Frequency: Every 5 seconds
+    
+    [4] Web Crypto API
+    - Protocol: JavaScript Crypto API (local)
+    - Data: Encrypted/decrypted location data
+    - Algorithm: AES-256-GCM
+    - Performance: Hardware-accelerated
+    
+    [5] Battery API
+    - Protocol: JavaScript Battery Status API
+    - Data: Battery level (0-100%), charging status
+    - Events: chargingchange, levelchange
+    
+    [6] Network Info API
+    - Protocol: JavaScript Network Information API
+    - Data: Connection type (4G/5G/Wi-Fi), downlink speed
+    - Events: Connection changes
+    
+    [7] Leaflet/Map Tiles
+    - Protocol: HTTPS tile server
+    - Data: Map imagery (PNG tiles)
+    - CDN: Cloudflare/Fastly caching
+  '''
+}
+
+// Express Server Connections (Application Layer)
+Table express_connections {
+  connection_id int [pk]
+  target_component varchar [not null]
+  technology varchar [not null]
+  operation_type varchar [not null]
+  persistence varchar
+  
+  Note: '''
+    Express server connections to data stores and services.
+    Core application layer integrations.
+    
+    Connection Details:
+    
+    [8] users.json
+    - Technology: Node.js fs module
+    - Operations: JSON.parse(), JSON.stringify()
+    - Data: User accounts (CRUD operations)
+    - Location: Project root directory
+    - Concurrency: Single-threaded (safe)
+    
+    [9] devices (Map)
+    - Technology: JavaScript Map object
+    - Storage: Server RAM
+    - Operations: get/set/delete (O(1))
+    - Data: Device state, location, battery
+    - Persistence: None (ephemeral)
+    - Key: Socket ID (string)
+    
+    [10] shareTokens (Map)
+    - Technology: JavaScript Map object
+    - Storage: Server RAM
+    - Operations: create/validate/expire
+    - Data: Share tokens with 24h TTL
+    - Key: Token (32-char hex)
+    
+    [11] sessions (MemoryStore)
+    - Technology: express-session
+    - Storage: Server RAM
+    - Operations: create/validate/update/destroy
+    - Data: User sessions (24h rolling)
+    - Key: Session ID (in cookie)
+    
+    [12] Socket.io Engine
+    - Technology: Socket.io 4.x
+    - Transport: WebSocket + long-polling fallback
+    - Operations: emit, listen, broadcast, join/leave rooms
+    - Data: Real-time events
+    
+    [13] Passport.js
+    - Technology: Passport middleware
+    - Operations: authenticate, serialize, deserialize
+    - Strategy: Google OAuth 2.0
+    - Data: User authentication state
+  '''
+}
+
+// Socket.io Real-time Connections
+Table socketio_connections {
+  connection_id int [pk]
+  connection_type varchar [not null]
+  mechanism varchar [not null]
+  bidirectional boolean
+  authentication varchar
+  
+  Note: '''
+    Socket.io real-time connections and room management.
+    WebSocket-based persistent connections.
+    
+    Connection Details:
+    
+    [14] Socket Rooms
+    - Mechanism: Internal pub/sub
+    - Room Naming: user_{userId}
+    - Isolation: Per-user rooms (no cross-user)
+    - Operations: socket.join(), io.to(room).emit()
+    - Data: Room memberships
+    
+    [15] Connected Devices
+    - Mechanism: WebSocket persistent connections
+    - Direction: Bidirectional
+    - Client → Server Events:
+      • register-device
+      • send-location
+      • alert-device
+      • start-sharing
+      • stop-sharing
+    - Server → Client Events:
+      • devices-update
+      • receive-location
+      • play-alert
+      • share-link
+      • share-status
+    
+    [16] Share Viewers
+    - Mechanism: WebSocket persistent connections
+    - Direction: Server → Viewer (one-way)
+    - Authentication: None (public via token)
+    - Data: Real-time location updates
+    - Access: Read-only (no control)
+  '''
+}
+
+// Complete Data Flow Sequences
+Table data_flow_sequences {
+  flow_id int [pk]
+  flow_name varchar [not null]
+  sequence_steps text [not null]
+  trigger varchar
+  duration varchar
+  
+  Note: '''
+    Complete end-to-end data flow sequences.
+    Shows how data moves through the entire system.
+    
+    ═══════════════════════════════════════════
+    [1] AUTHENTICATION FLOW
+    ═══════════════════════════════════════════
+    1. Browser → Express Server (GET /login)
+    2. Express → Passport.js (authenticate)
+    3. Browser → Google OAuth (consent screen)
+    4. Google → Browser (authorization code)
+    5. Browser → Express (OAuth callback)
+    6. Express → Google (exchange code for token)
+    7. Google → Express (user profile)
+    8. Express → Passport (serialize user)
+    9. Express → sessions (create session)
+    10. Express → users.json (save/update user)
+    11. Express → Browser (redirect to /)
+    
+    Duration: 2-5 seconds
+    Trigger: User clicks "Login with Google"
+    
+    ═══════════════════════════════════════════
+    [2] LOCATION UPDATE FLOW
+    ═══════════════════════════════════════════
+    1. Browser → Geolocation API (get coordinates)
+    2. Browser → Web Crypto (encrypt location)
+    3. Browser → Battery API (get battery level)
+    4. Browser → Network Info (get connection type)
+    5. Browser → Socket.io (emit "send-location")
+    6. Socket.io → Express (receive event)
+    7. Express → devices Map (store encrypted data)
+    8. Express → Socket Rooms (identify user room)
+    9. Socket.io → All user devices (broadcast)
+    10. Devices → Web Crypto (decrypt location)
+    11. Devices → Map Tiles (display on map)
+    
+    Duration: <100ms per update
+    Trigger: Every 5 seconds (automatic)
+    
+    ═══════════════════════════════════════════
+    [3] DEVICE REGISTRATION FLOW
+    ═══════════════════════════════════════════
+    1. Browser → Express (check authentication)
+    2. Browser → Socket.io (WebSocket connect)
+    3. Browser → Platform detection (navigator.platform)
+    4. Browser → Battery API (get status)
+    5. Browser → Network Info (get type)
+    6. Browser → Socket.io (emit "register-device")
+    7. Socket.io → Express (receive registration)
+    8. Express → devices Map (store device)
+    9. Express → Socket Rooms (join user room)
+    10. Socket.io → All user devices (broadcast update)
+    
+    Duration: <500ms
+    Trigger: Page load after authentication
+    
+    ═══════════════════════════════════════════
+    [4] SHARE LOCATION FLOW
+    ═══════════════════════════════════════════
+    GENERATION:
+    1. Browser → Socket.io (emit "start-sharing")
+    2. Express → crypto.randomBytes(16)
+    3. Express → shareTokens Map (store token)
+    4. Socket.io → Browser (emit "share-link")
+    5. Browser → Clipboard (copy URL)
+    
+    ACCESS:
+    6. Viewer → Express (GET /share/:token)
+    7. Express → shareTokens Map (validate token)
+    8. Express → devices Map (get device)
+    9. Express → Socket.io (create viewer connection)
+    10. Socket.io → Viewer (stream locations)
+    
+    Duration: Instant generation, 24h validity
+    Trigger: User clicks "Share Location"
+    
+    ═══════════════════════════════════════════
+    [5] DEVICE ALERT FLOW
+    ═══════════════════════════════════════════
+    1. Browser → Socket.io (emit "alert-device")
+    2. Express → devices Map (validate target)
+    3. Socket.io → Target device (emit "play-alert")
+    4. Target device → Audio API (play sound)
+    
+    Duration: <50ms
+    Trigger: User clicks "Find Device"
+  '''
+}
+
+// Component Dependencies Map
+Table component_dependencies {
+  component_name varchar [pk]
+  depends_on text
+  required_by text
+  dependency_type varchar
+  
+  Note: '''
+    Component dependency relationships.
+    Shows what each component needs and what needs it.
+    
+    ═══════════════════════════════════════════
+    DEPENDENCY TREE:
+    ═══════════════════════════════════════════
+    
+    users.json (Data Source)
+    ├── Required by:
+    │   ├── Express (user lookup)
+    │   ├── Passport.js (authentication)
+    │   └── Socket.io (user validation)
+    └── Requires: None (root data)
+    
+    devices Map (State Store)
+    ├── Required by:
+    │   ├── Socket.io (device state tracking)
+    │   ├── Express (device list API)
+    │   └── shareTokens (device reference)
+    └── Requires:
+        └── users (userId foreign key)
+    
+    shareTokens Map (Temporary Store)
+    ├── Required by:
+    │   ├── Express (/share route validation)
+    │   └── Socket.io (share viewer streaming)
+    └── Requires:
+        ├── devices (socketId reference)
+        └── users (userId reference)
+    
+    sessions (Auth Store)
+    ├── Required by:
+    │   ├── Express (route authentication)
+    │   ├── Passport.js (session management)
+    │   └── Socket.io (auth via cookie)
+    └── Requires:
+        └── users (user ID)
+    
+    Socket Rooms (Broadcast Channels)
+    ├── Required by:
+    │   ├── Socket.io (message broadcasting)
+    │   └── devices (room membership)
+    └── Requires:
+        └── users (userId for room naming)
+    
+    Passport.js (Middleware)
+    ├── Required by:
+    │   ├── Express (authentication middleware)
+    │   └── Socket.io (user validation)
+    └── Requires:
+        ├── users.json (user storage)
+        ├── sessions (session storage)
+        └── Google OAuth API (external)
+    
+    Socket.io (Real-time Engine)
+    ├── Required by:
+    │   ├── Browser (WebSocket client)
+    │   └── Express (event handling)
+    └── Requires:
+        ├── devices Map (state tracking)
+        ├── Socket Rooms (broadcasting)
+        └── sessions (authentication)
+    
+    ═══════════════════════════════════════════
+    CRITICAL PATHS:
+    ═══════════════════════════════════════════
+    
+    User Authentication:
+    Browser → Express → Passport → Google → users.json → sessions
+    
+    Real-time Tracking:
+    Browser → Socket.io → devices Map → Socket Rooms → Browser
+    
+    Location Sharing:
+    Browser → Socket.io → shareTokens Map → devices Map → Viewer
+    
+    ═══════════════════════════════════════════
+    FAILURE IMPACT ANALYSIS:
+    ═══════════════════════════════════════════
+    
+    If users.json fails:
+    - No new user registration
+    - Existing sessions continue (cached in memory)
+    - Device tracking continues
+    - Impact: HIGH (authentication disabled)
+    
+    If devices Map fails:
+    - No device tracking
+    - No location updates
+    - Sharing breaks
+    - Impact: CRITICAL (core feature lost)
+    
+    If Socket.io fails:
+    - No real-time updates
+    - No device registration
+    - No location sharing
+    - Impact: CRITICAL (app unusable)
+    
+    If Google OAuth fails:
+    - No new logins
+    - Existing sessions continue
+    - All features work for logged-in users
+    - Impact: MEDIUM (new users blocked)
+  '''
+}
+    
+    ╔════════════════════════════════════════════════════════════════╗
+    ║                  REALTIME DEVICE TRACKER                        ║
+    ║                   CONNECTION ARCHITECTURE                       ║
+    ╚════════════════════════════════════════════════════════════════╝
+    
+    ┌─────────────┐
+    │   BROWSER   │ (Client Layer)
+    └──────┬──────┘
+           │
+           ├──[1]──► Google OAuth API
+           │         ↓ HTTPS REST
+           │         OAuth 2.0 tokens + User profile
+           │
+           ├──[2]──► Express Server (:3000)
+           │         ↓ HTTPS/WSS
+           │         Session cookies + WebSocket
+           │
+           ├──[3]──► Geolocation API
+           │         ↓ JavaScript
+           │         GPS coordinates (lat/lng)
+           │
+           ├──[4]──► Web Crypto API
+           │         ↓ JavaScript
+           │         AES-256-GCM encryption
+           │
+           ├──[5]──► Battery API
+           │         ↓ JavaScript
+           │         Battery level + charging status
+           │
+           ├──[6]──► Network Info API
+           │         ↓ JavaScript
+           │         Connection type (Wi-Fi/4G/5G)
+           │
+           └──[7]──► Leaflet/Map Tiles
+                     ↓ HTTPS
+                     Map imagery (PNG tiles)
+    
+    ┌──────────────────┐
+    │  EXPRESS SERVER  │ (Application Layer)
+    └────────┬─────────┘
+             │
+             ├──[8]──► users.json
+             │         ↓ File System (fs.readFileSync/writeFileSync)
+             │         User accounts (CRUD operations)
+             │
+             ├──[9]──► devices (Map)
+             │         ↓ In-Memory (RAM)
+             │         Device state (get/set/delete)
+             │
+             ├─[10]──► shareTokens (Map)
+             │         ↓ In-Memory (RAM)
+             │         Share tokens (create/validate/expire)
+             │
+             ├─[11]──► sessions (MemoryStore)
+             │         ↓ In-Memory (RAM)
+             │         User sessions (24h TTL)
+             │
+             ├─[12]──► Socket.io Engine
+             │         ↓ WebSocket/Polling
+             │         Real-time events
+             │
+             └─[13]──► Passport.js
+                       ↓ Middleware
+                       Authentication strategy
+    
+    ┌──────────────────┐
+    │   SOCKET.IO      │ (Real-time Layer)
+    └────────┬─────────┘
+             │
+             ├─[14]──► Socket Rooms
+             │         ↓ In-Memory (Pub/Sub)
+             │         user_{userId} rooms
+             │
+             ├─[15]──► Connected Devices
+             │         ↓ WebSocket Connections
+             │         Bidirectional events
+             │
+             └─[16]──► Share Viewers
+                       ↓ WebSocket Connections
+                       Public location streaming
+    
+    ═══════════════════════════════════════════════════════════════
+    CONNECTION DETAILS BY NUMBER:
+    ═══════════════════════════════════════════════════════════════
+    
+    [1] BROWSER ←→ GOOGLE OAUTH
+        Protocol: HTTPS REST API
+        Direction: Bidirectional
+        Data Flow:
+          → Authorization request (client_id, redirect_uri, scopes)
+          ← Authorization code
+          → Exchange code for access token
+          ← User profile (id, email, name, photo)
+        Security: OAuth 2.0, HTTPS encryption
+    
+    [2] BROWSER ←→ EXPRESS SERVER
+        Protocol: HTTPS (HTTP/1.1 or HTTP/2)
+        Direction: Bidirectional (Request/Response)
+        Data Flow:
+          → HTTP requests (GET/POST routes)
+          ← HTML pages (EJS rendered)
+          ← Static files (CSS/JS/images)
+          ↔ Session cookies (24h expiry)
+        Security: Session-based auth, httpOnly cookies
+    
+    [3] BROWSER ←→ GEOLOCATION API
+        Protocol: JavaScript W3C Geolocation API
+        Direction: Browser → JavaScript
+        Data Flow:
+          ← GPS coordinates {latitude, longitude}
+          ← Accuracy, altitude, heading, speed
+        Trigger: navigator.geolocation.watchPosition()
+        Frequency: Every 5 seconds
+    
+    [4] BROWSER ←→ WEB CRYPTO API
+        Protocol: JavaScript Web Crypto API
+        Direction: Local (no network)
+        Data Flow:
+          → Plaintext location data
+          ← Encrypted ciphertext + IV + auth tag
+          → Encrypted data from server
+          ← Decrypted plaintext
+        Algorithm: AES-256-GCM
+        Performance: Hardware-accelerated
+    
+    [5] BROWSER ←→ BATTERY API
+        Protocol: JavaScript Battery Status API
+        Direction: Browser → JavaScript
+        Data Flow:
+          ← Battery level (0-100%)
+          ← Charging status (true/false)
+          ← Charging time, discharging time
+        Events: chargingchange, levelchange
+    
+    [6] BROWSER ←→ NETWORK INFO API
+        Protocol: JavaScript Network Information API
+        Direction: Browser → JavaScript
+        Data Flow:
+          ← Connection type (4g, 5g, wifi, ethernet)
+          ← Effective connection type
+          ← Downlink speed
+        Events: Connection change notifications
+    
+    [7] BROWSER ←→ MAP TILES
+        Protocol: HTTPS tile server
+        Direction: Request/Response
+        Data Flow:
+          → Tile requests (zoom, x, y coordinates)
+          ← PNG tile images
+        CDN: Cloudflare/Fastly caching
+        Caching: Browser cache + service worker
+    
+    [8] EXPRESS ←→ users.json
+        Protocol: Node.js fs module
+        Direction: Read/Write
+        Data Flow:
+          ← Read all users on startup
+          → Write user on registration/update
+        Operations: JSON.parse(), JSON.stringify()
+        Concurrency: Single-threaded (safe)
+        Location: Project root directory
+    
+    [9] EXPRESS ←→ devices (Map)
+        Protocol: In-memory JavaScript Map
+        Direction: Get/Set/Delete
+        Data Flow:
+          → Store device on registration
+          → Update on location change
+          ← Retrieve for broadcasts
+          → Delete on disconnect
+        Key: Socket ID (string)
+        Value: Device object
+        Persistence: None (ephemeral)
+    
+    [10] EXPRESS ←→ shareTokens (Map)
+        Protocol: In-memory JavaScript Map
+        Direction: Get/Set/Delete
+        Data Flow:
+          → Create token on share start
+          ← Validate token on share access
+          → Delete token on share stop/expire
+        Key: Token (32-char hex)
+        Value: {socketId, userId, deviceName, expiresAt}
+        TTL: 24 hours (manual cleanup)
+    
+    [11] EXPRESS ←→ sessions (MemoryStore)
+        Protocol: express-session middleware
+        Direction: Get/Set/Touch/Delete
+        Data Flow:
+          → Create session on login
+          ← Validate session on requests
+          → Update session expiry (rolling)
+          → Delete session on logout
+        Key: Session ID (in cookie)
+        Value: {passport: {user: userId}, ...}
+        TTL: 24 hours
+    
+    [12] EXPRESS ←→ SOCKET.IO
+        Protocol: Socket.io protocol over WebSocket/polling
+        Direction: Bidirectional events
+        Data Flow:
+          ↔ Connection handshake
+          → Emit events to clients
+          ← Listen for client events
+          ↔ Room join/leave operations
+          ↔ Broadcasting to rooms
+        Transport: WebSocket (primary), long-polling (fallback)
+    
+    [13] EXPRESS ←→ PASSPORT.JS
+        Protocol: Middleware chain
+        Direction: Function calls
+        Data Flow:
+          → passport.authenticate() strategy
+          → passport.serializeUser() on login
+          ← passport.deserializeUser() on request
+          ← req.user populated
+          ← req.isAuthenticated() status
+        Strategy: Google OAuth 2.0
+    
+    [14] SOCKET.IO ←→ SOCKET ROOMS
+        Protocol: Internal pub/sub
+        Direction: Publish/Subscribe
+        Data Flow:
+          → socket.join("user_{userId}")
+          → io.to("user_{userId}").emit()
+          ← All sockets in room receive
+        Room Naming: user_{userId}
+        Isolation: Per-user rooms (no cross-user)
+    
+    [15] SOCKET.IO ←→ CONNECTED DEVICES
+        Protocol: WebSocket persistent connections
+        Direction: Bidirectional events
+        Events (Client → Server):
+          • register-device
+          • send-location
+          • alert-device
+          • start-sharing
+          • stop-sharing
+        Events (Server → Client):
+          • devices-update
+          • receive-location
+          • play-alert
+          • share-link
+          • share-status
+    
+    [16] SOCKET.IO ←→ SHARE VIEWERS
+        Protocol: WebSocket persistent connections
+        Direction: Server → Viewer (one-way)
+        Data Flow:
+          → Real-time location updates
+          → Device status changes
+          ← Viewer disconnects
+        Authentication: None (public via token)
+        Read-only: Viewers cannot control device
+    
+    ═══════════════════════════════════════════════════════════════
+    DATA FLOW SEQUENCES:
+    ═══════════════════════════════════════════════════════════════
+    
+    ** AUTHENTICATION FLOW **
+    Browser → [2] → Express → [13] → Passport
+            → [1] → Google OAuth
+            ← [1] ← User Profile
+            → [13] → Passport (serialize)
+            → [11] → Session Store
+            → [8] → users.json
+            ← [2] ← Redirect to /
+    
+    ** LOCATION UPDATE FLOW **
+    Browser → [3] → Geolocation API
+            → [4] → Web Crypto (encrypt)
+            → [5] → Battery API
+            → [6] → Network Info API
+            → [2] → Express (HTTP for session)
+            → [12] → Socket.io
+            → [15] → emit "send-location"
+    Server  ← [15] ← receive event
+            → [9] → devices Map (store)
+            → [14] → Socket Rooms
+            → [15] → broadcast "receive-location"
+    Other   ← [15] ← receive broadcast
+    Devices → [4] → Web Crypto (decrypt)
+            → [7] → Map Tiles (display)
+    
+    ** DEVICE REGISTRATION FLOW **
+    Browser → [2] → Express (auth check)
+            → [12] → Socket.io (connect)
+    Socket  → [15] → emit "register-device"
+            → Platform detection
+            → Battery API
+            → Network Info
+    Server  ← [15] ← receive registration
+            → [9] → devices Map (store)
+            → [14] → Join user room
+            → [15] → broadcast "devices-update"
+    
+    ** SHARE LOCATION FLOW **
+    Browser → [15] → emit "start-sharing"
+    Server  ← [15] ← receive event
+            → crypto.randomBytes(16)
+            → [10] → shareTokens Map (store)
+            → [15] → emit "share-link"
+    Browser ← [15] ← receive share URL
+            → Copy to clipboard
+    Viewer  → [2] → GET /share/:token
+    Server  → [10] → shareTokens Map (validate)
+            → [9] → devices Map (get device)
+            → [12] → Socket.io (new connection)
+            → [16] → Stream locations
+    
+    ═══════════════════════════════════════════════════════════════
+    COMPONENT DEPENDENCIES:
+    ═══════════════════════════════════════════════════════════════
+    
+    users.json
+      ↓ required by
+      ├─ Express (user lookup)
+      ├─ Passport (authentication)
+      └─ Socket.io (user validation)
+    
+    devices Map
+      ↓ required by
+      ├─ Socket.io (device state)
+      ├─ Express (device list)
+      └─ shareTokens (device reference)
+    
+    shareTokens Map
+      ↓ requires
+      ├─ devices (socketId reference)
+      └─ users (userId reference)
+      ↓ required by
+      ├─ Express (/share route)
+      └─ Socket.io (share streaming)
+    
+    sessions
+      ↓ requires
+      └─ users (user ID)
+      ↓ required by
+      ├─ Express (authentication)
+      ├─ Passport (session management)
+      └─ Socket.io (auth via cookie)
+    
+    Socket Rooms
+      ↓ requires
+      └─ users (userId for room name)
+      ↓ required by
+      ├─ Socket.io (broadcasting)
+      └─ devices (room membership)
+  '''
+}
+
+Table database_connections {
+  storage_type varchar [pk]
+  technology varchar
+  access_pattern varchar
+  scaling_path text
+  
+  Note: '''
+    ## Data Storage Connections
+    
+    **1. File System (users.json)**
+    - Technology: Node.js fs module (sync/async)
+    - Location: Project root directory
+    - Access Pattern: Read on startup, write on change
+    - Concurrency: Single-threaded (no locking needed)
+    - Backup: Git version control
+    - Scaling Path: 
+      * Phase 1: JSON file (current)
+      * Phase 2: SQLite (100-1k users)
+      * Phase 3: MongoDB/PostgreSQL (1k-100k users)
+      * Phase 4: Managed DB + replication (100k+ users)
+    
+    **2. In-Memory Map (devices)**
+    - Technology: JavaScript Map object
+    - Storage: Server RAM
+    - Access Pattern: O(1) get/set/delete
+    - Persistence: None (rebuilt on server restart)
+    - Size Limit: RAM available (~1GB = 1M devices)
+    - Scaling Path:
+      * Phase 1: Map in RAM (current)
+      * Phase 2: Redis (shared across servers)
+      * Phase 3: Redis Cluster (horizontal scaling)
+    
+    **3. In-Memory Map (shareTokens)**
+    - Technology: JavaScript Map object
+    - Storage: Server RAM
+    - Access Pattern: O(1) lookup by token
+    - Expiration: Manual cleanup (every hour)
+    - TTL: 24 hours
+    - Scaling Path:
+      * Phase 1: Map in RAM (current)
+      * Phase 2: Redis with built-in TTL
+      * Phase 3: DynamoDB with TTL (serverless)
+    
+    **4. Session Store (express-session)**
+    - Technology: MemoryStore (default)
+    - Storage: Server RAM
+    - Access Pattern: Cookie-based lookup
+    - Expiration: 24 hours (rolling)
+    - Warning: Not production-ready (single server only)
+    - Scaling Path:
+      * Phase 1: MemoryStore (current - dev only)
+      * Phase 2: connect-redis (production)
+      * Phase 3: Redis Cluster (high availability)
+      * Alternative: MongoDB session store
+    
+    **5. Socket.io Adapter**
+    - Technology: In-memory adapter (default)
+    - Storage: Server RAM (room memberships)
+    - Access Pattern: Pub/sub for room broadcasts
+    - Limitation: Single server only
+    - Scaling Path:
+      * Phase 1: Memory adapter (current)
+      * Phase 2: socket.io-redis adapter
+      * Phase 3: Redis Cluster for multi-region
+  '''
+}

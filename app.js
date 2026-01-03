@@ -162,6 +162,18 @@ io.on("connection", function(socket) {
         io.to(targetId).emit("play-alert");
     });
     
+    // Handle request location from device
+    socket.on("request-location", function(targetId) {
+        const device = devices.get(socket.id);
+        const targetDevice = devices.get(targetId);
+        
+        // Only allow location requests from devices in the same user account
+        if (device && targetDevice && device.userId === targetDevice.userId) {
+            io.to(targetId).emit("location-requested", socket.id);
+            console.log(`Location requested for device ${targetId} by ${socket.id}`);
+        }
+    });
+    
     // Handle start sharing
     socket.on("start-sharing", function() {
         const device = devices.get(socket.id);

@@ -247,6 +247,54 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 
 const markers = {};
 
+// Function to send current location immediately
+async function sendCurrentLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const { latitude, longitude, accuracy, altitude, speed, heading } = position.coords;
+                console.log(`📍 Sending current location - Accuracy: ${accuracy}m`);
+                
+                const deviceInfo = await getDeviceInfo();
+                const encryptedLocation = await encryption.encrypt(
+                    { 
+                        latitude, longitude, accuracy, altitude, speed, heading,
+                        timestamp: Date.now(),
+                        battery: deviceInfo.battery,
+                        charging: deviceInfo.charging,
+                        connection: deviceInfo.connection
+                    },
+                    encryptionKey
+                );
+                
+                const locationData = { 
+                    encrypted: encryptedLocation,
+                    battery: deviceInfo.battery,
+                    charging: deviceInfo.charging
+                };
+                
+                const currentDevice = devices.get(socket.id);
+                if (currentDevice?.isSharing) {
+                    locationData.latitude = latitude;
+                    locationData.longitude = longitude;
+                }
+                
+                socket.emit("send-location", locationData);
+            },
+            (error) => {
+                console.error('Failed to get current location:', error);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
+}
+
+// Listen for location requests from other devices
+socket.on("location-requested", (requesterId) => {
+    console.log(`📍 Location requested by device ${requesterId}`);
+    sendCurrentLocation();
+});
+
 // Receive encrypted location updates
 socket.on("receive-location", async (data) => {
     const { id, encrypted, battery, charging } = data;
@@ -431,8 +479,30 @@ function locateDevice(deviceId) {
             markers[deviceId].openPopup();
         }
     } else {
-        console.warn('Device location not available:', device);
-        alert("Location not available for this device. The device may be offline or location tracking may be disabled.");
+        console.warn('Device location not available, requesting fresh location');
+        // Request fresh location from the device
+        socket.emit("request-location", deviceId);
+        
+        // Show waiting message
+        const notification = document.createElement('div');
+        notification.className = 'alert-notification';
+        notification.innerHTML = '📍 Requesting location from device...';
+        document.body.appendChild(notification);
+        
+        setTimeout(() => notification.remove(), 3000);
+        
+        // Try again after 3 seconds
+        setTimeout(() => {
+            const updatedDevice = devices.get(deviceId);
+            if (updatedDevice && updatedDevice.latitude && updatedDevice.longitude) {
+                map.setView([updatedDevice.latitude, updatedDevice.longitude], 18);
+                if (markers[deviceId]) {
+                    markers[deviceId].openPopup();
+                }
+            } else {
+                alert("Unable to get location from device. Make sure the device has location enabled and granted permissions.");
+            }
+        }, 3000);
     }
 }
 
