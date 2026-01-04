@@ -500,6 +500,49 @@ app.post('/api/update-location', isAuthenticated, async function(req, res) {
     }
 });
 
+// API endpoint for Android app to verify Google OAuth user
+app.post('/api/verify-google-user', async function(req, res) {
+    try {
+        const { email, name, googleId } = req.body;
+        
+        if (!email || !googleId) {
+            return res.status(400).json({ success: false, message: 'Email and googleId required' });
+        }
+        
+        console.log(`🔐 Android app login attempt: ${email}`);
+        
+        // Check if user exists in database with this Google ID
+        let user = null;
+        for (const userId in usersDB) {
+            if (usersDB[userId].id === googleId) {
+                user = usersDB[userId];
+                break;
+            }
+        }
+        
+        if (!user) {
+            // User doesn't exist - they need to login via website first
+            console.log(`❌ User not found: ${email}`);
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Please sign in on the website first to create your account' 
+            });
+        }
+        
+        console.log(`✅ User verified: ${email}`);
+        res.json({ 
+            success: true, 
+            userId: user.id,
+            name: user.displayName,
+            email: user.email
+        });
+        
+    } catch (error) {
+        console.error('Error verifying Google user:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // API endpoint for Android app to send location updates
 app.post('/api/location-update-app', async function(req, res) {
     try {
