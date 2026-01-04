@@ -533,7 +533,7 @@ app.post('/api/verify-google-user', async function(req, res) {
         res.json({ 
             success: true, 
             userId: user.id,
-            name: user.displayName,
+            name: user.displayName || user.name || email.split('@')[0],
             email: user.email
         });
         
