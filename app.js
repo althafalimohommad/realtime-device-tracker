@@ -500,6 +500,41 @@ app.post('/api/update-location', isAuthenticated, async function(req, res) {
     }
 });
 
+// API endpoint for Android app to send location updates
+app.post('/api/location-update-app', async function(req, res) {
+    try {
+        const { latitude, longitude, accuracy, deviceName, battery, charging, timestamp } = req.body;
+        const userAgent = req.headers['user-agent'];
+        const authHeader = req.headers.authorization;
+        
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ success: false, message: 'Unauthorized' });
+        }
+        
+        const userId = authHeader.replace('Bearer ', '');
+        
+        console.log(`📱 Android app location update from user ${userId}: ${latitude}, ${longitude}`);
+        
+        // Update device location in database
+        if (userId && userAgent) {
+            await updateDeviceLocation(userId, userAgent, {
+                latitude,
+                longitude,
+                accuracy,
+                battery,
+                charging
+            });
+            
+            console.log(`✅ Location saved from Android app: ${deviceName}`);
+        }
+        
+        res.json({ success: true, message: 'Location updated' });
+    } catch (error) {
+        console.error('Error processing app location update:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 app.post('/api/register-device', isAuthenticated, async function(req, res) {
     try {
         const userId = req.user.id;

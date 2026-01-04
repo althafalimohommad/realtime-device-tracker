@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center"
+    android:background="#1a1a1a">
+
+    <!-- App Logo/Icon -->
+    <ImageView
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:src="@android:drawable/ic_menu_mylocation"
+        android:tint="#1a73e8"
+        android:layout_marginBottom="32dp"/>
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Device Tracker"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:textColor="#ffffff"
+        android:layout_marginBottom="8dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Register your device for tracking"
+        android:textSize="14sp"
+        android:textColor="#888888"
+        android:layout_marginBottom="32dp"/>
+
+    <!-- Status Text -->
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Register this device to start tracking"
+        android:textSize="16sp"
+        android:textColor="#888888"
+        android:gravity="center"
+        android:padding="16dp"
+        android:background="#2a2a2a"
+        android:layout_marginBottom="24dp"
+        android:textAlignment="center"/>
+
+    <!-- Device Name Input -->
+    <EditText
+        android:id="@+id/deviceNameInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Device Name (e.g., My Phone)"
+        android:textColorHint="#666666"
+        android:textColor="#ffffff"
+        android:padding="16dp"
+        android:background="@android:drawable/edit_text"
+        android:inputType="text"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Register Button -->
+    <Button
+        android:id="@+id/registerButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Register Device"
+        android:textSize="16sp"
+        android:textColor="#ffffff"
+        android:background="#1a73e8"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp"
+        android:textAllCaps="false"/>
+
+    <!-- Unregister Button -->
+    <Button
+        android:id="@+id/unregisterButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Unregister Device"
+        android:textSize="16sp"
+        android:textColor="#ffffff"
+        android:background="#dc3545"
+        android:padding="16dp"
+        android:visibility="gone"
+        android:textAllCaps="false"/>
+
+    <!-- Info Text -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="ℹ️ This app tracks your device location in the background. View locations on the website."
+        android:textSize="12sp"
+        android:textColor="#666666"
+        android:layout_marginTop="24dp"
+        android:textAlignment="center"
+        android:padding="8dp"/>
+
+</LinearLayout>
