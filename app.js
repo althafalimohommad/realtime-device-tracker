@@ -62,12 +62,28 @@ async function saveUser(user) {
     }
 }
 
+// Fetch user from cache or DB
+async function getUserById(userId) {
+    let user = usersDB[userId];
+    if (!user && useMongoDb) {
+        user = await database.getUser(userId);
+        if (user) {
+            usersDB[userId] = user;
+        }
+    }
+    return user;
+}
+
 // Update device location in database
 async function updateDeviceLocation(userId, fingerprint, locationData) {
-    const user = usersDB[userId];
-    if (!user || !user.registeredDevices) {
-        console.log(`⚠️ Cannot update location: user or registeredDevices not found for ${userId}`);
+    const user = await getUserById(userId);
+    if (!user) {
+        console.log(`⚠️ Cannot update location: user not found for ${userId}`);
         return;
+    }
+
+    if (!user.registeredDevices) {
+        user.registeredDevices = [];
     }
     
     const device = user.registeredDevices.find(d => d.fingerprint === fingerprint);
@@ -555,9 +571,45 @@ app.post('/api/location-update-app', async function(req, res) {
         }
         
         const userId = authHeader.replace('Bearer ', '');
-        
+
         console.log(`📱 Android app location update from user ${userId}: ${latitude}, ${longitude}`);
-        
+
+        const user = await getUserById(userId);
+        if (!user) {
+            console.log(`⚠️ Unknown user for location update: ${userId}`);
+            return res.status(401).json({ success: false, message: 'User not found' });
+        }
+
+        if (!user.registeredDevices) {
+            user.registeredDevices = [];
+        }
+
+        let device = user.registeredDevices.find(d => d.fingerprint === userAgent);
+
+        // Auto-register the Android device if it has not been registered via the web
+        if (!device) {
+            device = {
+                id: crypto.randomBytes(16).toString('hex'),
+                name: deviceName || 'Android Device',
+                type: 'Android',
+                model: userAgent?.substring(0, 100) || 'Android',
+                platform: 'android-app',
+                browser: 'android-app',
+                icon: '📱',
+                registeredAt: new Date().toISOString(),
+                fingerprint: userAgent,
+                lastLatitude: null,
+                lastLongitude: null,
+                lastAccuracy: null,
+                lastSeen: null,
+                lastBattery: null,
+                lastCharging: null
+            };
+            user.registeredDevices.push(device);
+            await saveUser(user);
+            console.log(`🆕 Auto-registered Android device for user ${userId}: ${device.name}`);
+        }
+
         // Update device location in database
         if (userId && userAgent) {
             await updateDeviceLocation(userId, userAgent, {
