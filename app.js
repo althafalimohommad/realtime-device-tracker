@@ -65,10 +65,14 @@ async function saveUser(user) {
 // Update device location in database
 async function updateDeviceLocation(userId, fingerprint, locationData) {
     const user = usersDB[userId];
-    if (!user || !user.registeredDevices) return;
+    if (!user || !user.registeredDevices) {
+        console.log(`⚠️ Cannot update location: user or registeredDevices not found for ${userId}`);
+        return;
+    }
     
     const device = user.registeredDevices.find(d => d.fingerprint === fingerprint);
     if (device) {
+        console.log(`💾 Updating location for device: ${device.name}`);
         device.lastLatitude = locationData.latitude;
         device.lastLongitude = locationData.longitude;
         device.lastAccuracy = locationData.accuracy;
@@ -77,6 +81,10 @@ async function updateDeviceLocation(userId, fingerprint, locationData) {
         device.lastCharging = locationData.charging;
         
         await saveUser(user);
+        console.log(`✅ Location saved for ${device.name}`);
+    } else {
+        console.log(`⚠️ Device not found in registeredDevices. Fingerprint: ${fingerprint?.substring(0, 50)}...`);
+        console.log(`Available devices:`, user.registeredDevices.map(d => ({ name: d.name, fp: d.fingerprint?.substring(0, 30) })));
     }
 }
 
@@ -411,25 +419,26 @@ app.get('/api/last-known-locations', isAuthenticated, async function(req, res) {
             return res.json({ devices: [] });
         }
         
-        // Return devices with their last known locations
-        const devicesWithLocation = user.registeredDevices
-            .filter(d => d.lastLatitude && d.lastLongitude)
-            .map(d => ({
-                id: d.id,
-                name: d.name,
-                fingerprint: d.fingerprint,
-                icon: d.icon || '📱',
-                type: d.type,
-                latitude: d.lastLatitude,
-                longitude: d.lastLongitude,
-                accuracy: d.lastAccuracy,
-                lastSeen: d.lastSeen,
-                battery: d.lastBattery,
-                charging: d.lastCharging,
-                isOnline: false // Will be updated by frontend if device is connected
-            }));
+        // Return ALL registered devices with their last known locations (if any)
+        const devicesData = user.registeredDevices.map(d => ({
+            id: d.id,
+            name: d.name,
+            fingerprint: d.fingerprint,
+            icon: d.icon || '📱',
+            type: d.type,
+            latitude: d.lastLatitude || null,
+            longitude: d.lastLongitude || null,
+            accuracy: d.lastAccuracy || null,
+            lastSeen: d.lastSeen || d.registeredAt,
+            battery: d.lastBattery || null,
+            charging: d.lastCharging || false,
+            hasLocation: !!(d.lastLatitude && d.lastLongitude),
+            isOnline: false // Will be updated by frontend if device is connected
+        }));
         
-        res.json({ devices: devicesWithLocation });
+        console.log(`📍 Returning ${devicesData.length} registered devices, ${devicesData.filter(d => d.hasLocation).length} with location`);
+        
+        res.json({ devices: devicesData });
     } catch (error) {
         console.error('Error fetching last known locations:', error);
         res.status(500).json({ success: false, message: error.message });

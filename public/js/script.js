@@ -1064,7 +1064,12 @@ function copyLocation(deviceId) {
     }
     
     if (latitude == null || longitude == null) {
-        showToast('❌ Location not available for this device');
+        const deviceName = device?.name || 'This device';
+        if (device?.isOffline) {
+            showToast(`⚠️ ${deviceName} hasn't sent location yet. Open the app on that device to track its location.`);
+        } else {
+            showToast('❌ Location not available for this device');
+        }
         return;
     }
     
