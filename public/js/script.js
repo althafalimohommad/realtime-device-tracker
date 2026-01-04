@@ -539,6 +539,8 @@ socket.on("receive-location", async (data) => {
             device.longitude = longitude;
             device.battery = battery;
             device.charging = charging;
+            device.lastSeen = Date.now();
+            device.isOffline = false; // Mark as online when receiving location
         }
         
         // Battery icon and color
@@ -666,16 +668,19 @@ socket.on("devices-update", (devicesList) => {
             device.latitude = existingDevice.latitude;
             device.longitude = existingDevice.longitude;
         }
-        // Add lastSeen timestamp
+        // Add lastSeen timestamp and mark as online
         device.lastSeen = Date.now();
+        device.isOffline = false; // Mark as online since it's actively connected
         devices.set(device.id, device);
     });
     
-    // Remove devices that are no longer in the list
-    const deviceIds = new Set(devicesList.map(d => d.id));
+    // Mark devices not in the update list as offline (but don't remove them)
+    const onlineDeviceIds = new Set(devicesList.map(d => d.id));
     devices.forEach((device, id) => {
-        if (!deviceIds.has(id)) {
-            devices.delete(id);
+        if (!onlineDeviceIds.has(id) && device.isOffline !== true) {
+            // Device was online but now disconnected - mark as offline
+            device.isOffline = true;
+            devices.set(id, device);
         }
     });
     
@@ -749,11 +754,17 @@ function updateDeviceList() {
         
         // Mark current device
         const isCurrentDevice = device.id === socket.id;
+        const isOffline = device.isOffline === true;
+        const statusColor = isOffline ? '#888' : '#1e8e3e';
+        const statusText = isOffline ? 'Offline' : 'Online';
         
         item.innerHTML = `
             <div class="device-icon">${deviceIcon}</div>
             <div class="device-item-info">
-                <div class="device-item-name">${device.name}${isCurrentDevice ? ' (This device)' : ''}</div>
+                <div class="device-item-name">
+                    ${device.name}${isCurrentDevice ? ' (This device)' : ''}
+                    <span style="color: ${statusColor}; font-size: 0.85em; margin-left: 8px;">● ${statusText}</span>
+                </div>
                 <div class="device-item-status">Last seen ${timeAgo}</div>
                 ${device.battery !== null ? `<div class="device-item-battery">${batteryPercent}</div>` : ''}
             </div>
@@ -771,54 +782,61 @@ function updateDeviceList() {
 
 // Load registered devices from database and show their last known locations
 async function loadRegisteredDevicesLocations() {
-    console.log('📍 Loading registered devices locations...');
+    console.log('📍 Loading last known device locations from database...');
     
-    if (!currentUser || !currentUser.registeredDevices) return;
-    
-    // Filter devices that have location data
-    const devicesWithLocation = currentUser.registeredDevices.filter(d => 
-        d.latitude != null && d.longitude != null
-    );
-    
-    console.log(`Found ${devicesWithLocation.length} devices with stored locations`);
-    
-    devicesWithLocation.forEach(device => {
-        // Add to devices map if not already there
-        if (!devices.has(device.id)) {
-            const deviceData = {
-                id: device.id,
-                name: device.name,
-                deviceIcon: device.icon || '📱',
-                deviceType: device.type,
-                isRegistered: true,
-                userId: currentUser.id,
-                latitude: device.latitude,
-                longitude: device.longitude,
-                lastSeen: device.lastLocationUpdate || device.registeredAt,
-                battery: null,
-                charging: false
-            };
-            devices.set(device.id, deviceData);
-            
-            // Add marker to map
-            addOrUpdateMarker(device.id, {
-                latitude: device.latitude,
-                longitude: device.longitude,
-                accuracy: device.accuracy || 50,
-                battery: null,
-                charging: false,
-                timestamp: device.lastLocationUpdate || new Date().toISOString()
-            });
+    try {
+        const response = await fetch('/api/last-known-locations');
+        const data = await response.json();
+        
+        if (!data.devices || data.devices.length === 0) {
+            console.log('No devices with saved locations found');
+            return;
         }
-    });
-    
-    // Update device list
-    updateDeviceList();
+        
+        console.log(`Found ${data.devices.length} devices with last known locations`);
+        
+        data.devices.forEach(device => {
+            // Add to devices map if not already online
+            if (!devices.has(device.id)) {
+                const deviceData = {
+                    id: device.id,
+                    name: device.name,
+                    deviceIcon: '📱',
+                    deviceType: device.name,
+                    isRegistered: true,
+                    userId: currentUser.id,
+                    latitude: device.latitude,
+                    longitude: device.longitude,
+                    lastSeen: device.lastSeen,
+                    battery: device.battery,
+                    charging: device.charging,
+                    isOffline: true // Mark as offline
+                };
+                devices.set(device.id, deviceData);
+                
+                // Add marker to map with offline indicator
+                addOrUpdateMarker(device.id, {
+                    latitude: device.latitude,
+                    longitude: device.longitude,
+                    accuracy: device.accuracy || 50,
+                    battery: device.battery,
+                    charging: device.charging,
+                    timestamp: device.lastSeen,
+                    isOffline: true
+                });
+            }
+        });
+        
+        // Update device list to show both online and offline devices
+        updateDeviceList();
+    } catch (error) {
+        console.error('Error loading last known locations:', error);
+    }
 }
 
 // Helper function to add or update marker on map
 function addOrUpdateMarker(deviceId, locationData) {
-    const { latitude, longitude, accuracy, battery, charging, timestamp } = locationData;
+    const { latitude, longitude, accuracy, battery, charging, timestamp, isOffline } = locationData;
     
     if (!latitude || !longitude) {
         console.warn('Cannot add marker: missing coordinates');
@@ -827,48 +845,41 @@ function addOrUpdateMarker(deviceId, locationData) {
     
     console.log(`Adding/updating marker for device ${deviceId} at ${latitude}, ${longitude}`);
     
+    const device = devices.get(deviceId);
+    const name = device ? device.name : `Device ${deviceId.substring(0, 5)}`;
+    const timeAgo = timestamp ? (isOffline ? `Last seen: ${getTimeAgo(new Date(timestamp))}` : new Date(timestamp).toLocaleTimeString()) : 'Unknown';
+    const batteryDisplay = battery !== null ? 
+        `<span style="color: ${getBatteryColor(battery)}">${getBatteryIcon(battery, charging)} ${battery}%</span>` : 
+        'N/A';
+    
+    const popupContent = `
+        <div class="device-popup">
+            <b>${name}</b> ${isOffline ? '<span style="color: #888; font-size: 0.9em;">(Offline)</span>' : '<span style="color: #4CAF50; font-size: 0.9em;">(Online)</span>'}<br>
+            <div class="popup-info">
+                <a href="https://www.google.com/maps?q=${latitude},${longitude}" target="_blank" style="color: #1a73e8; text-decoration: none;">📍 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}</a><br>
+                ${battery !== null ? `${batteryDisplay}${charging ? ' (Charging)' : ''}<br>` : ''}
+                ${accuracy ? `📏 Accuracy: ±${Math.round(accuracy)}m<br>` : ''}
+                ⏰ ${timeAgo}
+            </div>
+        </div>
+    `;
+    
     if (markers[deviceId]) {
         // Update existing marker
         markers[deviceId].setLatLng([latitude, longitude]);
-        const device = devices.get(deviceId);
-        const name = device ? device.name : `Device ${deviceId.substring(0, 5)}`;
-        const timeAgo = new Date(timestamp).toLocaleTimeString();
-        const batteryDisplay = battery !== null ? 
-            `<span style="color: ${getBatteryColor(battery)}">${getBatteryIcon(battery, charging)} ${battery}%</span>` : 
-            'N/A';
+        markers[deviceId].setPopupContent(popupContent);
         
-        markers[deviceId].setPopupContent(`
-            <div class="device-popup">
-                <b>${name}</b><br>
-                <div class="popup-info">
-                    <a href="https://www.google.com/maps?q=${latitude},${longitude}" target="_blank" style="color: #1a73e8; text-decoration: none;">📍 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}</a><br>
-                    ${battery !== null ? `${batteryDisplay}${charging ? ' (Charging)' : ''}<br>` : ''}
-                    ${accuracy ? `📏 Accuracy: ±${Math.round(accuracy)}m<br>` : ''}
-                    ⏰ ${timeAgo}
-                </div>
-            </div>
-        `);
+        // Change marker icon for offline devices (gray)
+        if (isOffline && markers[deviceId].setOpacity) {
+            markers[deviceId].setOpacity(0.6);
+        }
     } else {
         // Create new marker
-        const marker = L.marker([latitude, longitude]).addTo(map);
-        const device = devices.get(deviceId);
-        const name = device ? device.name : `Device ${deviceId.substring(0, 5)}`;
-        const timeAgo = new Date(timestamp).toLocaleTimeString();
-        const batteryDisplay = battery !== null ? 
-            `<span style="color: ${getBatteryColor(battery)}">${getBatteryIcon(battery, charging)} ${battery}%</span>` : 
-            'N/A';
+        const marker = L.marker([latitude, longitude], {
+            opacity: isOffline ? 0.6 : 1.0
+        }).addTo(map);
         
-        marker.bindPopup(`
-            <div class="device-popup">
-                <b>${name}</b><br>
-                <div class="popup-info">
-                    <a href="https://www.google.com/maps?q=${latitude},${longitude}" target="_blank" style="color: #1a73e8; text-decoration: none;">📍 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}</a><br>
-                    ${battery !== null ? `${batteryDisplay}${charging ? ' (Charging)' : ''}<br>` : ''}
-                    ${accuracy ? `📏 Accuracy: ±${Math.round(accuracy)}m<br>` : ''}
-                    ⏰ ${timeAgo}
-                </div>
-            </div>
-        `);
+        marker.bindPopup(popupContent);
         markers[deviceId] = marker;
         
         // Auto zoom to first marker

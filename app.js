@@ -62,6 +62,24 @@ async function saveUser(user) {
     }
 }
 
+// Update device location in database
+async function updateDeviceLocation(userId, fingerprint, locationData) {
+    const user = usersDB[userId];
+    if (!user || !user.registeredDevices) return;
+    
+    const device = user.registeredDevices.find(d => d.fingerprint === fingerprint);
+    if (device) {
+        device.lastLatitude = locationData.latitude;
+        device.lastLongitude = locationData.longitude;
+        device.lastAccuracy = locationData.accuracy;
+        device.lastSeen = new Date().toISOString();
+        device.lastBattery = locationData.battery;
+        device.lastCharging = locationData.charging;
+        
+        await saveUser(user);
+    }
+}
+
 // Passport configuration
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
@@ -188,7 +206,7 @@ io.on("connection", function(socket) {
     });
     
     // Handle location updates (encrypted)
-    socket.on("send-location", function(data) {
+    socket.on("send-location", async function(data) {
         const device = devices.get(socket.id);
         if (device && device.isRegistered) { // Only process location for registered devices
             // Store encrypted data without decrypting (E2EE)
@@ -201,6 +219,17 @@ io.on("connection", function(socket) {
             if (data.latitude !== undefined && data.longitude !== undefined) {
                 device.latitude = data.latitude;
                 device.longitude = data.longitude;
+                
+                // Save last known location to database
+                if (device.userId && device.platform) {
+                    await updateDeviceLocation(device.userId, device.platform, {
+                        latitude: data.latitude,
+                        longitude: data.longitude,
+                        accuracy: data.accuracy,
+                        battery: data.battery,
+                        charging: data.charging
+                    });
+                }
             }
             
             // Broadcast instantly to user's room (all their registered devices)
@@ -278,9 +307,21 @@ io.on("connection", function(socket) {
     });
     
     // Handle disconnect
-    socket.on("disconnect", function() {
+    socket.on("disconnect", async function() {
         const device = devices.get(socket.id);
         const userId = device?.userId;
+        
+        // Save last known location to database before device disconnects
+        if (device && device.isRegistered && device.userId && device.latitude && device.longitude) {
+            await updateDeviceLocation(device.userId, device.platform, {
+                latitude: device.latitude,
+                longitude: device.longitude,
+                accuracy: device.accuracy,
+                battery: device.battery,
+                charging: device.charging
+            });
+            console.log(`💾 Saved last known location for device ${socket.id}`);
+        }
         
         // Clean up share token on disconnect
         if (device && device.shareToken) {
@@ -347,6 +388,47 @@ app.get('/logout', function(req, res) {
 
 app.get('/api/user', isAuthenticated, function(req, res) {
     res.json(req.user);
+});
+
+// API endpoint to get last known locations for all registered devices
+app.get('/api/last-known-locations', isAuthenticated, async function(req, res) {
+    try {
+        const userId = req.user.id;
+        
+        // Get user from cache or database
+        let user = usersDB[userId];
+        if (!user && useMongoDb) {
+            user = await database.getUser(userId);
+            if (user) {
+                usersDB[userId] = user;
+            }
+        }
+        
+        if (!user || !user.registeredDevices) {
+            return res.json({ devices: [] });
+        }
+        
+        // Return devices with their last known locations
+        const devicesWithLocation = user.registeredDevices
+            .filter(d => d.lastLatitude && d.lastLongitude)
+            .map(d => ({
+                id: d.id,
+                name: d.name,
+                fingerprint: d.fingerprint,
+                latitude: d.lastLatitude,
+                longitude: d.lastLongitude,
+                accuracy: d.lastAccuracy,
+                lastSeen: d.lastSeen,
+                battery: d.lastBattery,
+                charging: d.lastCharging,
+                isOnline: false // Will be updated by frontend if device is connected
+            }));
+        
+        res.json({ devices: devicesWithLocation });
+    } catch (error) {
+        console.error('Error fetching last known locations:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
 });
 
 // API endpoint to register a device
