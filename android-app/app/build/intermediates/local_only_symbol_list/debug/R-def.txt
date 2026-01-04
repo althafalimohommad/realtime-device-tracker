@@ -1,0 +1,16 @@
+R_DEF: Internal format may change without notice
+local
+id btnLogout
+id btnSignIn
+id deviceNameInput
+id progressBar
+id registerButton
+id statusText
+id tvEmail
+id tvStatus
+id tvUserInfo
+id tvWelcome
+id unregisterButton
+layout activity_login
+layout activity_main
+string app_name

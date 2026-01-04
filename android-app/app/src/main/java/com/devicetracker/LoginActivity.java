@@ -35,7 +35,8 @@ import okhttp3.Response;
 public class LoginActivity extends AppCompatActivity {
     private static final String TAG = "LoginActivity";
     private static final int RC_SIGN_IN = 9001;
-    private static final String PREFS_NAME = "DeviceTrackerPrefs";
+    // Use same prefs as MainActivity/Service so userId is available for tracking
+    private static final String PREFS_NAME = "DeviceTracker";
     private static final String SERVER_URL = "https://realtime-device-tracker-s9ua.onrender.com";
     
     private GoogleSignInClient mGoogleSignInClient;

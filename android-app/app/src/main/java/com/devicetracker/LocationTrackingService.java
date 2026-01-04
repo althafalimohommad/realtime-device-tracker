@@ -52,15 +52,35 @@ public class LocationTrackingService extends Service {
         createNotificationChannel();
         startForeground(NOTIFICATION_ID, getNotification("Starting location tracking..."));
         
-        startLocationUpdates();
+        // Don't start location updates here - wait for onStartCommand to save userId first
     }
     
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null) {
             String name = intent.getStringExtra("deviceName");
+            String userId = intent.getStringExtra("userId");
+            String fingerprint = intent.getStringExtra("fingerprint");
+            
+            Log.d(TAG, "onStartCommand - deviceName: " + name + ", userId: " + userId);
+            
             if (name != null) {
                 deviceName = name;
+                // Save to SharedPreferences so ApiClient can access userId
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putString("deviceName", deviceName);
+                if (userId != null) {
+                    editor.putString("userId", userId);
+                }
+                if (fingerprint != null) {
+                    editor.putString("deviceFingerprint", fingerprint);
+                }
+                editor.commit(); // Use commit() to ensure it's saved immediately
+                
+                Log.d(TAG, "Saved to SharedPreferences - userId: " + prefs.getString("userId", "NOT_FOUND"));
+                
+                // Now start location updates after userId is saved
+                startLocationUpdates();
             }
         }
         

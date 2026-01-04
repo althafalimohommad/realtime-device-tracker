@@ -42,6 +42,8 @@ public class ApiClient {
             String userId = prefs.getString("userId", "");
             String deviceName = prefs.getString("deviceName", "Android Device");
             
+            Log.d(TAG, "Attempting to send location - userId: '" + userId + "', deviceName: '" + deviceName + "'");
+            
             if (userId.isEmpty()) {
                 callback.onError("User not logged in");
                 return;
