@@ -1273,9 +1273,18 @@ function locateDevice(deviceId) {
         if (markers[deviceId]) {
             markers[deviceId].openPopup();
         }
+    } else if (markers[deviceId]) {
+        // If device object doesn't have location but marker exists, use marker position
+        console.log('Using marker position for location');
+        const markerLatLng = markers[deviceId].getLatLng();
+        map.setView([markerLatLng.lat, markerLatLng.lng], 18);
+        markers[deviceId].openPopup();
+    } else if (device && device.isOffline) {
+        // Device is offline and no location available
+        alert(`${device.name} is offline and no last known location is available.`);
     } else {
         console.warn('Device location not available, requesting fresh location');
-        // Request fresh location from the device
+        // Request fresh location from the device (only for online devices)
         socket.emit("request-location", deviceId);
         
         // Show waiting message
@@ -1294,6 +1303,11 @@ function locateDevice(deviceId) {
                 if (markers[deviceId]) {
                     markers[deviceId].openPopup();
                 }
+            } else if (markers[deviceId]) {
+                // Check marker position again
+                const markerLatLng = markers[deviceId].getLatLng();
+                map.setView([markerLatLng.lat, markerLatLng.lng], 18);
+                markers[deviceId].openPopup();
             } else {
                 alert("Unable to get location from device. Make sure the device has location enabled and granted permissions.");
             }
