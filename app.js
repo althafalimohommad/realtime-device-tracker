@@ -176,6 +176,7 @@ io.on("connection", function(socket) {
             battery: null,
             charging: false,
             platform: data.deviceInfo?.platform || 'Unknown',
+            fingerprint: data.deviceInfo?.userAgent || null,
             connection: data.deviceInfo?.connection || 'unknown',
             deviceType: data.deviceInfo?.deviceType || 'Unknown Device',
             deviceIcon: data.deviceInfo?.deviceIcon || '📱'
@@ -415,6 +416,8 @@ app.get('/api/last-known-locations', isAuthenticated, async function(req, res) {
                 id: d.id,
                 name: d.name,
                 fingerprint: d.fingerprint,
+                icon: d.icon || '📱',
+                type: d.type,
                 latitude: d.lastLatitude,
                 longitude: d.lastLongitude,
                 accuracy: d.lastAccuracy,

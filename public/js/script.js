@@ -662,7 +662,24 @@ socket.on('location-updated', (data) => {
 socket.on("devices-update", (devicesList) => {
     console.log('Devices update received:', devicesList);
     devicesList.forEach(device => {
-        // Preserve location data if device already exists
+        // Check if there's an offline version of this device and remove it
+        const offlineKey = `offline_${device.fingerprint}`;
+        if (devices.has(offlineKey)) {
+            const offlineDevice = devices.get(offlineKey);
+            // Preserve location from offline device
+            if (offlineDevice.latitude && offlineDevice.longitude) {
+                device.latitude = offlineDevice.latitude;
+                device.longitude = offlineDevice.longitude;
+            }
+            // Remove offline marker
+            if (markers[offlineKey]) {
+                map.removeLayer(markers[offlineKey]);
+                delete markers[offlineKey];
+            }
+            devices.delete(offlineKey);
+        }
+        
+        // Preserve location data if device already exists online
         const existingDevice = devices.get(device.id);
         if (existingDevice && existingDevice.latitude && existingDevice.longitude) {
             device.latitude = existingDevice.latitude;
@@ -677,7 +694,7 @@ socket.on("devices-update", (devicesList) => {
     // Mark devices not in the update list as offline (but don't remove them)
     const onlineDeviceIds = new Set(devicesList.map(d => d.id));
     devices.forEach((device, id) => {
-        if (!onlineDeviceIds.has(id) && device.isOffline !== true) {
+        if (!onlineDeviceIds.has(id) && device.isOffline !== true && !id.startsWith('offline_')) {
             // Device was online but now disconnected - mark as offline
             device.isOffline = true;
             devices.set(id, device);
@@ -695,11 +712,48 @@ socket.on("devices-update", (devicesList) => {
 
 // Handle user disconnection
 socket.on("user-disconnected", (id) => {
-    if (markers[id]) {
-        map.removeLayer(markers[id]);
-        delete markers[id];
+    const device = devices.get(id);
+    
+    if (device && device.fingerprint) {
+        // Convert online device to offline with new key
+        const offlineKey = `offline_${device.fingerprint}`;
+        device.isOffline = true;
+        device.lastSeen = Date.now();
+        
+        // Move to offline key
+        devices.set(offlineKey, device);
+        devices.delete(id);
+        
+        // Update marker to show offline status
+        if (markers[id]) {
+            // Remove old marker
+            map.removeLayer(markers[id]);
+            delete markers[id];
+            
+            // Add new offline marker if device has location
+            if (device.latitude && device.longitude) {
+                addOrUpdateMarker(offlineKey, {
+                    latitude: device.latitude,
+                    longitude: device.longitude,
+                    accuracy: device.accuracy || 50,
+                    battery: device.battery,
+                    charging: device.charging,
+                    timestamp: device.lastSeen,
+                    isOffline: true
+                });
+            }
+        }
+        
+        console.log(`Device ${id} went offline, moved to ${offlineKey}`);
+    } else {
+        // No fingerprint, just remove (shouldn't happen for registered devices)
+        if (markers[id]) {
+            map.removeLayer(markers[id]);
+            delete markers[id];
+        }
+        devices.delete(id);
     }
-    devices.delete(id);
+    
     updateDeviceList();
 });
 
@@ -796,13 +850,25 @@ async function loadRegisteredDevicesLocations() {
         console.log(`Found ${data.devices.length} devices with last known locations`);
         
         data.devices.forEach(device => {
-            // Add to devices map if not already online
-            if (!devices.has(device.id)) {
+            // Use fingerprint-based key for offline devices to enable matching when they come online
+            const deviceKey = `offline_${device.fingerprint}`;
+            
+            // Check if this device is already online by fingerprint
+            let isAlreadyOnline = false;
+            devices.forEach((dev, key) => {
+                if (dev.fingerprint === device.fingerprint && !key.startsWith('offline_')) {
+                    isAlreadyOnline = true;
+                }
+            });
+            
+            // Only add if not already online
+            if (!isAlreadyOnline) {
                 const deviceData = {
                     id: device.id,
+                    fingerprint: device.fingerprint,
                     name: device.name,
-                    deviceIcon: '📱',
-                    deviceType: device.name,
+                    deviceIcon: device.icon || '📱',
+                    deviceType: device.type || device.name,
                     isRegistered: true,
                     userId: currentUser.id,
                     latitude: device.latitude,
@@ -812,10 +878,10 @@ async function loadRegisteredDevicesLocations() {
                     charging: device.charging,
                     isOffline: true // Mark as offline
                 };
-                devices.set(device.id, deviceData);
+                devices.set(deviceKey, deviceData);
                 
                 // Add marker to map with offline indicator
-                addOrUpdateMarker(device.id, {
+                addOrUpdateMarker(deviceKey, {
                     latitude: device.latitude,
                     longitude: device.longitude,
                     accuracy: device.accuracy || 50,
