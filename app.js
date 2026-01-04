@@ -221,9 +221,10 @@ io.on("connection", function(socket) {
                 device.latitude = data.latitude;
                 device.longitude = data.longitude;
                 
-                // Save last known location to database
-                if (device.userId && device.platform) {
-                    await updateDeviceLocation(device.userId, device.platform, {
+                // Save last known location to database using fingerprint
+                if (device.userId && device.fingerprint) {
+                    console.log(`💾 Saving location for user ${device.userId}, device fingerprint: ${device.fingerprint?.substring(0, 50)}...`);
+                    await updateDeviceLocation(device.userId, device.fingerprint, {
                         latitude: data.latitude,
                         longitude: data.longitude,
                         accuracy: data.accuracy,
@@ -313,15 +314,16 @@ io.on("connection", function(socket) {
         const userId = device?.userId;
         
         // Save last known location to database before device disconnects
-        if (device && device.isRegistered && device.userId && device.latitude && device.longitude) {
-            await updateDeviceLocation(device.userId, device.platform, {
+        if (device && device.isRegistered && device.userId && device.latitude && device.longitude && device.fingerprint) {
+            console.log(`💾 Saving last location on disconnect for device ${socket.id}, fingerprint: ${device.fingerprint?.substring(0, 50)}...`);
+            await updateDeviceLocation(device.userId, device.fingerprint, {
                 latitude: device.latitude,
                 longitude: device.longitude,
                 accuracy: device.accuracy,
                 battery: device.battery,
                 charging: device.charging
             });
-            console.log(`💾 Saved last known location for device ${socket.id}`);
+            console.log(`✅ Saved last known location for device ${socket.id}`);
         }
         
         // Clean up share token on disconnect

@@ -842,14 +842,19 @@ async function loadRegisteredDevicesLocations() {
         const response = await fetch('/api/last-known-locations');
         const data = await response.json();
         
+        console.log('API Response:', data); // Debug log
+        
         if (!data.devices || data.devices.length === 0) {
             console.log('No devices with saved locations found');
             return;
         }
         
         console.log(`Found ${data.devices.length} devices with last known locations`);
+        console.log('Devices from API:', data.devices); // Debug log
         
         data.devices.forEach(device => {
+            console.log('Processing offline device:', device); // Debug log
+            
             // Use fingerprint-based key for offline devices to enable matching when they come online
             const deviceKey = `offline_${device.fingerprint}`;
             
@@ -858,6 +863,7 @@ async function loadRegisteredDevicesLocations() {
             devices.forEach((dev, key) => {
                 if (dev.fingerprint === device.fingerprint && !key.startsWith('offline_')) {
                     isAlreadyOnline = true;
+                    console.log(`Device ${device.name} is already online, skipping offline version`);
                 }
             });
             
@@ -879,6 +885,7 @@ async function loadRegisteredDevicesLocations() {
                     isOffline: true // Mark as offline
                 };
                 devices.set(deviceKey, deviceData);
+                console.log(`Added offline device: ${deviceKey}`, deviceData);
                 
                 // Add marker to map with offline indicator
                 addOrUpdateMarker(deviceKey, {
@@ -890,6 +897,7 @@ async function loadRegisteredDevicesLocations() {
                     timestamp: device.lastSeen,
                     isOffline: true
                 });
+                console.log(`Added marker for offline device: ${device.name}`);
             }
         });
         
