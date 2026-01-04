@@ -41,8 +41,9 @@ public class ApiClient {
         try {
             String userId = prefs.getString("userId", "");
             String deviceName = prefs.getString("deviceName", "Android Device");
+            String deviceFingerprint = prefs.getString("deviceFingerprint", "");
             
-            Log.d(TAG, "Attempting to send location - userId: '" + userId + "', deviceName: '" + deviceName + "'");
+            Log.d(TAG, "Attempting to send location - userId: '" + userId + "', deviceName: '" + deviceName + "', fp: '" + deviceFingerprint + "'");
             
             if (userId.isEmpty()) {
                 callback.onError("User not logged in");
@@ -55,6 +56,7 @@ public class ApiClient {
             json.put("longitude", longitude);
             json.put("accuracy", accuracy);
             json.put("deviceName", deviceName);
+            json.put("fingerprint", deviceFingerprint);
             json.put("timestamp", System.currentTimeMillis());
             
             // Get battery info
@@ -69,6 +71,7 @@ public class ApiClient {
             Request request = new Request.Builder()
                 .url(BASE_URL + "/api/location-update-app")
                 .addHeader("User-Agent", userAgent)
+                .addHeader("X-Device-Fingerprint", deviceFingerprint)
                 .addHeader("Authorization", "Bearer " + userId)
                 .post(body)
                 .build();

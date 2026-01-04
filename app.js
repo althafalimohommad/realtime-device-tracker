@@ -562,8 +562,10 @@ app.post('/api/verify-google-user', async function(req, res) {
 // API endpoint for Android app to send location updates
 app.post('/api/location-update-app', async function(req, res) {
     try {
-        const { latitude, longitude, accuracy, deviceName, battery, charging, timestamp } = req.body;
+        const { latitude, longitude, accuracy, deviceName, battery, charging, timestamp, fingerprint: bodyFingerprint } = req.body;
         const userAgent = req.headers['user-agent'];
+        const headerFingerprint = req.headers['x-device-fingerprint'];
+        const fingerprint = bodyFingerprint || headerFingerprint || userAgent;
         const authHeader = req.headers.authorization;
         
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -572,7 +574,7 @@ app.post('/api/location-update-app', async function(req, res) {
         
         const userId = authHeader.replace('Bearer ', '');
 
-        console.log(`📱 Android app location update from user ${userId}: ${latitude}, ${longitude}`);
+        console.log(`📱 Android app location update from user ${userId}: ${latitude}, ${longitude} (fp: ${fingerprint?.substring(0, 40)})`);
 
         const user = await getUserById(userId);
         if (!user) {
@@ -584,7 +586,7 @@ app.post('/api/location-update-app', async function(req, res) {
             user.registeredDevices = [];
         }
 
-        let device = user.registeredDevices.find(d => d.fingerprint === userAgent);
+        let device = user.registeredDevices.find(d => d.fingerprint === fingerprint);
 
         // Auto-register the Android device if it has not been registered via the web
         if (!device) {
@@ -597,7 +599,7 @@ app.post('/api/location-update-app', async function(req, res) {
                 browser: 'android-app',
                 icon: '📱',
                 registeredAt: new Date().toISOString(),
-                fingerprint: userAgent,
+                fingerprint: fingerprint,
                 lastLatitude: null,
                 lastLongitude: null,
                 lastAccuracy: null,
@@ -611,8 +613,8 @@ app.post('/api/location-update-app', async function(req, res) {
         }
 
         // Update device location in database
-        if (userId && userAgent) {
-            await updateDeviceLocation(userId, userAgent, {
+        if (userId && fingerprint) {
+            await updateDeviceLocation(userId, fingerprint, {
                 latitude,
                 longitude,
                 accuracy,
