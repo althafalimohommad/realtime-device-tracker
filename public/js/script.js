@@ -341,11 +341,11 @@ function startLocationTracking() {
     // Send initial location immediately
     sendCurrentLocation();
     
-    // Update location every 3 minutes (180000 ms)
+    // Update location every 1 minute (60000 ms)
     setInterval(() => {
         sendCurrentLocation();
-        console.log('🔄 Updating location (every 3 minutes)');
-    }, 180000);
+        console.log('🔄 Updating location (every 1 minute)');
+    }, 60000);
     
     // Also watch position for real-time updates
     if (navigator.geolocation) {
@@ -379,15 +379,11 @@ function startLocationTracking() {
                 const locationData = { 
                     encrypted: encryptedLocation,
                     battery: deviceInfo.battery,
-                    charging: deviceInfo.charging
+                    charging: deviceInfo.charging,
+                    latitude: latitude,  // Always send for database storage
+                    longitude: longitude,
+                    accuracy: accuracy
                 };
-                
-                // Include plain coordinates if sharing is enabled
-                const currentDevice = devices.get(socket.id);
-                if (currentDevice?.isSharing) {
-                    locationData.latitude = latitude;
-                    locationData.longitude = longitude;
-                }
                 
                 socket.emit("send-location", locationData);
             },
@@ -496,8 +492,9 @@ async function sendCurrentLocation() {
                     encrypted: encryptedLocation,
                     battery: deviceInfo.battery,
                     charging: deviceInfo.charging,
-                    latitude: latitude,  // Always include for own device
-                    longitude: longitude
+                    latitude: latitude,  // Always include for database storage
+                    longitude: longitude,
+                    accuracy: accuracy
                 };
                 
                 const currentDevice = devices.get(socket.id);
@@ -979,6 +976,9 @@ function showDeviceDetails(deviceId) {
     const timeAgo = device.lastSeen ? getTimeAgo(device.lastSeen) : 'just now';
     const batteryIcon = device.charging ? 'battery_charging_full' : 'battery_std';
     const networkInfo = device.deviceInfo?.connection || 'WiFi';
+    const isOffline = device.isOffline === true;
+    const statusText = isOffline ? 'Offline - Last Known Location' : 'Online';
+    const statusColor = isOffline ? '#888' : '#1e8e3e';
     
     detailsContainer.innerHTML = `
         <div class="device-header">
@@ -986,7 +986,7 @@ function showDeviceDetails(deviceId) {
             <div class="device-info-header">
                 <h2 class="device-name">${device.name}</h2>
                 <div class="device-status">
-                    <span>Last seen ${timeAgo}</span>
+                    <span style="color: ${statusColor};">● ${statusText}</span> • <span>Last seen ${timeAgo}</span>
                 </div>
                 <div class="device-meta">
                     ${device.battery !== null ? `
@@ -1054,6 +1054,13 @@ function copyLocation(deviceId) {
             latitude = registeredDevice.latitude;
             longitude = registeredDevice.longitude;
         }
+    }
+    
+    // If still not found, try to get from marker
+    if ((latitude == null || longitude == null) && markers[deviceId]) {
+        const markerLatLng = markers[deviceId].getLatLng();
+        latitude = markerLatLng.lat;
+        longitude = markerLatLng.lng;
     }
     
     if (latitude == null || longitude == null) {
