@@ -32,7 +32,8 @@ public class ApiClient {
     private final String userAgent;
     private final GoogleSignInClient googleClient;
     private final Context appContext;
-    private static final String SERVER_CLIENT_ID = " 31793728596-s6g87ot3785i62i48s7emh2nk3cbk6dv.apps.googleusercontent.com"; // TODO set from Google Cloud OAuth client (Web)
+    // Web client ID from Google Cloud (no spaces)
+    private static final String SERVER_CLIENT_ID = "31793728596-s6g87ot3785i62i48s7emh2nk3cbk6dv.apps.googleusercontent.com";
     
     public interface ApiCallback {
         void onSuccess(String response);
@@ -63,6 +64,7 @@ public class ApiClient {
             Log.d(TAG, "Attempting to send location - userId: '" + userId + "', deviceName: '" + deviceName + "', fp: '" + deviceFingerprint + "'");
             
             if (idToken.isEmpty()) {
+                Log.w(TAG, "ID token missing; attempting silent refresh");
                 refreshIdToken();
                 idToken = prefs.getString("idToken", "");
                 if (idToken.isEmpty()) {

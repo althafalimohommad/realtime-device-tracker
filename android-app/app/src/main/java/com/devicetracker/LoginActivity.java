@@ -38,7 +38,7 @@ public class LoginActivity extends AppCompatActivity {
     // Use same prefs as MainActivity/Service so userId is available for tracking
     private static final String PREFS_NAME = "DeviceTracker";
     private static final String SERVER_URL = "https://realtime-device-tracker-s9ua.onrender.com";
-    private static final String SERVER_CLIENT_ID = "YOUR_SERVER_CLIENT_ID"; // TODO: set from Google Cloud OAuth client (Web)
+    private static final String SERVER_CLIENT_ID = "31793728596-s6g87ot3785i62i48s7emh2nk3cbk6dv.apps.googleusercontent.com"; // Web client ID
     
     private GoogleSignInClient mGoogleSignInClient;
     private Button btnSignIn;
