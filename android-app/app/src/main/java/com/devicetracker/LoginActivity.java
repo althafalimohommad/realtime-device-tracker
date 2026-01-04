@@ -38,6 +38,7 @@ public class LoginActivity extends AppCompatActivity {
     // Use same prefs as MainActivity/Service so userId is available for tracking
     private static final String PREFS_NAME = "DeviceTracker";
     private static final String SERVER_URL = "https://realtime-device-tracker-s9ua.onrender.com";
+    private static final String SERVER_CLIENT_ID = "YOUR_SERVER_CLIENT_ID"; // TODO: set from Google Cloud OAuth client (Web)
     
     private GoogleSignInClient mGoogleSignInClient;
     private Button btnSignIn;
@@ -70,10 +71,11 @@ public class LoginActivity extends AppCompatActivity {
         
         // Configure Google Sign-In
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestEmail()
-                .requestId()
-                .requestProfile()
-                .build();
+            .requestEmail()
+            .requestId()
+            .requestProfile()
+            .requestIdToken(SERVER_CLIENT_ID)
+            .build();
         
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
         
@@ -114,19 +116,20 @@ public class LoginActivity extends AppCompatActivity {
             String email = account.getEmail();
             String name = account.getDisplayName();
             String googleId = account.getId();
+            String idToken = account.getIdToken();
             
             Log.d(TAG, "Signed in: " + email);
             tvStatus.setText("Verifying with server...");
             
             // Verify with backend server
-            verifyWithServer(email, name, googleId);
+            verifyWithServer(email, name, googleId, idToken);
         } else {
             setLoading(false);
             tvStatus.setText("Sign in failed");
         }
     }
 
-    private void verifyWithServer(String email, String name, String googleId) {
+    private void verifyWithServer(String email, String name, String googleId, String idToken) {
         try {
             JSONObject json = new JSONObject();
             json.put("email", email);
@@ -138,7 +141,7 @@ public class LoginActivity extends AppCompatActivity {
                 MediaType.parse("application/json; charset=utf-8")
             );
             
-            Request request = new Request.Builder()
+                Request request = new Request.Builder()
                     .url(SERVER_URL + "/api/verify-google-user")
                     .post(body)
                     .build();
@@ -170,6 +173,7 @@ public class LoginActivity extends AppCompatActivity {
                             editor.putString("userId", userId);
                             editor.putString("userName", userName);
                             editor.putString("userEmail", email);
+                            editor.putString("idToken", idToken);
                             editor.apply();
                             
                             Log.d(TAG, "User verified: " + userId);

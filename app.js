@@ -7,6 +7,7 @@ const socketio = require("socket.io");
 const session = require('express-session');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const { OAuth2Client } = require('google-auth-library');
 const fs = require('fs');
 const crypto = require('crypto');
 const database = require('./database');
@@ -23,6 +24,15 @@ const USERS_FILE = path.join(__dirname, 'users.json');
 // In-memory user cache
 let usersDB = {};
 let useMongoDb = false;
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+async function verifyGoogleIdToken(idToken) {
+    const ticket = await googleClient.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID
+    });
+    return ticket.getPayload();
+}
 
 // Initialize database connection
 async function initializeDatabase() {
@@ -559,7 +569,7 @@ app.post('/api/verify-google-user', async function(req, res) {
     }
 });
 
-// API endpoint for Android app to send location updates
+// API endpoint for Android app to send location updates (requires Google ID token)
 app.post('/api/location-update-app', async function(req, res) {
     try {
         const { latitude, longitude, accuracy, deviceName, battery, charging, timestamp, fingerprint: bodyFingerprint } = req.body;
@@ -571,15 +581,31 @@ app.post('/api/location-update-app', async function(req, res) {
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return res.status(401).json({ success: false, message: 'Unauthorized' });
         }
-        
-        const userId = authHeader.replace('Bearer ', '');
+        const idToken = authHeader.replace('Bearer ', '');
+        let userId;
+        let email;
+        try {
+            const payload = await verifyGoogleIdToken(idToken);
+            userId = payload.sub;
+            email = payload.email;
+        } catch (err) {
+            console.log('⚠️ Invalid Google ID token');
+            return res.status(401).json({ success: false, message: 'Invalid token' });
+        }
 
         console.log(`📱 Android app location update from user ${userId}: ${latitude}, ${longitude} (fp: ${fingerprint?.substring(0, 40)})`);
 
-        const user = await getUserById(userId);
+        let user = await getUserById(userId);
         if (!user) {
-            console.log(`⚠️ Unknown user for location update: ${userId}`);
-            return res.status(401).json({ success: false, message: 'User not found' });
+            // Auto-provision user on first app contact
+            user = {
+                id: userId,
+                email: email || 'unknown',
+                name: email || 'Android User',
+                devices: [],
+                registeredDevices: []
+            };
+            await saveUser(user);
         }
 
         if (!user.registeredDevices) {

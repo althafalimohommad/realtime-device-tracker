@@ -5,6 +5,11 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.util.Log;
 
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -25,6 +30,9 @@ public class ApiClient {
     private final OkHttpClient client;
     private final SharedPreferences prefs;
     private final String userAgent;
+    private final GoogleSignInClient googleClient;
+    private final Context appContext;
+    private static final String SERVER_CLIENT_ID = " 31793728596-s6g87ot3785i62i48s7emh2nk3cbk6dv.apps.googleusercontent.com"; // TODO set from Google Cloud OAuth client (Web)
     
     public interface ApiCallback {
         void onSuccess(String response);
@@ -33,8 +41,16 @@ public class ApiClient {
     
     public ApiClient(Context context) {
         this.client = new OkHttpClient();
-        this.prefs = context.getSharedPreferences("DeviceTracker", Context.MODE_PRIVATE);
+        this.appContext = context.getApplicationContext();
+        this.prefs = appContext.getSharedPreferences("DeviceTracker", Context.MODE_PRIVATE);
         this.userAgent = Build.MANUFACTURER + " " + Build.MODEL + " Android " + Build.VERSION.RELEASE;
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .requestId()
+                .requestProfile()
+                .requestIdToken(SERVER_CLIENT_ID)
+                .build();
+        this.googleClient = GoogleSignIn.getClient(appContext, gso);
     }
     
     public void sendLocationUpdate(double latitude, double longitude, float accuracy, ApiCallback callback) {
@@ -42,12 +58,17 @@ public class ApiClient {
             String userId = prefs.getString("userId", "");
             String deviceName = prefs.getString("deviceName", "Android Device");
             String deviceFingerprint = prefs.getString("deviceFingerprint", "");
+            String idToken = prefs.getString("idToken", "");
             
             Log.d(TAG, "Attempting to send location - userId: '" + userId + "', deviceName: '" + deviceName + "', fp: '" + deviceFingerprint + "'");
             
-            if (userId.isEmpty()) {
-                callback.onError("User not logged in");
-                return;
+            if (idToken.isEmpty()) {
+                refreshIdToken();
+                idToken = prefs.getString("idToken", "");
+                if (idToken.isEmpty()) {
+                    callback.onError("User not logged in");
+                    return;
+                }
             }
             
             // Create JSON payload
@@ -72,7 +93,7 @@ public class ApiClient {
                 .url(BASE_URL + "/api/location-update-app")
                 .addHeader("User-Agent", userAgent)
                 .addHeader("X-Device-Fingerprint", deviceFingerprint)
-                .addHeader("Authorization", "Bearer " + userId)
+                .addHeader("Authorization", "Bearer " + idToken)
                 .post(body)
                 .build();
             
@@ -109,5 +130,23 @@ public class ApiClient {
     private boolean isCharging() {
         // Simplified charging status - you can enhance this
         return false;
+    }
+
+    private void refreshIdToken() {
+        try {
+            GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(appContext);
+            if (account != null && account.getIdToken() != null) {
+                prefs.edit().putString("idToken", account.getIdToken()).apply();
+                return;
+            }
+
+            googleClient.silentSignIn().addOnSuccessListener(acct -> {
+                if (acct != null && acct.getIdToken() != null) {
+                    prefs.edit().putString("idToken", acct.getIdToken()).apply();
+                }
+            }).addOnFailureListener(err -> Log.w(TAG, "Silent sign-in failed", err));
+        } catch (Exception e) {
+            Log.w(TAG, "Unable to refresh ID token", e);
+        }
     }
 }

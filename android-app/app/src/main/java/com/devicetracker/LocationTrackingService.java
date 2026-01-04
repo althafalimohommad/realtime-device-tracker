@@ -140,6 +140,11 @@ public class LocationTrackingService extends Service {
             
             @Override
             public void onError(String error) {
+                if ("User not logged in".equals(error)) {
+                    Log.e(TAG, "ID token missing; stopping service to avoid unauthenticated sends");
+                    stopSelf();
+                    return;
+                }
                 Log.e(TAG, "Failed to send location: " + error);
                 // Retry after 30 seconds
                 handler.postDelayed(() -> {
