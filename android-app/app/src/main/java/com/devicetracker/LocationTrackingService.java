@@ -62,7 +62,21 @@ public class LocationTrackingService extends Service {
             String userId = intent.getStringExtra("userId");
             String fingerprint = intent.getStringExtra("fingerprint");
             
+            // Check for backend JWT token (preferred) or Google ID token (fallback)
+            String authToken = prefs.getString("authToken", "");
+            long tokenExpiry = prefs.getLong("tokenExpiry", 0);
+            String idToken = prefs.getString("idToken", "");
+            
             Log.d(TAG, "onStartCommand - deviceName: " + name + ", userId: " + userId);
+            
+            // Check if we have any valid authentication
+            boolean hasValidAuth = (!authToken.isEmpty() && tokenExpiry > System.currentTimeMillis()) || !idToken.isEmpty();
+            
+            if (!hasValidAuth) {
+                Log.e(TAG, "No valid authentication token; stopping service to avoid unauthenticated updates");
+                stopSelf();
+                return START_NOT_STICKY;
+            }
             
             if (name != null) {
                 deviceName = name;
@@ -135,17 +149,21 @@ public class LocationTrackingService extends Service {
         apiClient.sendLocationUpdate(latitude, longitude, accuracy, new ApiClient.ApiCallback() {
             @Override
             public void onSuccess(String response) {
-                Log.d(TAG, "Location sent to server: " + response);
+                Log.d(TAG, "Location sent to server successfully");
+                updateNotification(String.format("Last update: %.6f, %.6f ✓", latitude, longitude));
             }
             
             @Override
             public void onError(String error) {
-                if ("User not logged in".equals(error)) {
-                    Log.e(TAG, "ID token missing; stopping service to avoid unauthenticated sends");
-                    stopSelf();
+                if (error != null && (error.contains("not logged in") || error.contains("Authentication expired"))) {
+                    Log.e(TAG, "Authentication failed; stopping service - user needs to re-login");
+                    updateNotification("Authentication expired - please re-login");
+                    // Don't stop immediately, give user a chance to see the notification
+                    handler.postDelayed(() -> stopSelf(), 5000);
                     return;
                 }
                 Log.e(TAG, "Failed to send location: " + error);
+                updateNotification("Location update failed - retrying...");
                 // Retry after 30 seconds
                 handler.postDelayed(() -> {
                     apiClient.sendLocationUpdate(latitude, longitude, accuracy, this);

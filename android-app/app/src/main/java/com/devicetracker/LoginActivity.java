@@ -135,6 +135,7 @@ public class LoginActivity extends AppCompatActivity {
             json.put("email", email);
             json.put("name", name);
             json.put("googleId", googleId);
+            json.put("idToken", idToken);  // Send Google ID token for server-side verification
             
             RequestBody body = RequestBody.create(
                 json.toString(),
@@ -167,12 +168,25 @@ public class LoginActivity extends AppCompatActivity {
                             String userId = jsonResponse.getString("userId");
                             String userName = jsonResponse.getString("name");
                             
-                            // Save user info
+                            // Get the backend JWT token (long-lived, 7 days)
+                            String backendToken = jsonResponse.optString("token", "");
+                            long tokenExpiry = jsonResponse.optLong("tokenExpiry", 0);
+                            
+                            // Save user info and backend JWT
                             SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
                             SharedPreferences.Editor editor = prefs.edit();
                             editor.putString("userId", userId);
                             editor.putString("userName", userName);
                             editor.putString("userEmail", email);
+                            
+                            // Store backend JWT (preferred) for background location updates
+                            if (!backendToken.isEmpty()) {
+                                editor.putString("authToken", backendToken);  // Backend JWT
+                                editor.putLong("tokenExpiry", tokenExpiry);
+                                Log.d(TAG, "Backend JWT token stored, expires at: " + tokenExpiry);
+                            }
+                            
+                            // Also store Google ID token as fallback
                             editor.putString("idToken", idToken);
                             editor.apply();
                             
