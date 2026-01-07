@@ -155,8 +155,14 @@ fetch('/api/user')
 
 // Initialize as viewer - website only displays registered devices, doesn't track browser
 async function initializeViewer() {
-    console.log('🖥️ Initializing Find My Device viewer for user:', currentUser.email);
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('🖥️  FIND MY DEVICE - WEB VIEWER MODE');
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('✅ User:', currentUser.email);
     console.log('📱 Registered devices:', currentUser.registeredDevices?.length || 0);
+    console.log('🌐 This browser will NOT be tracked');
+    console.log('👁️  Only displaying locations from registered devices');
+    console.log('═══════════════════════════════════════════════════════════');
     
     // Just connect to socket to receive real-time updates from registered devices
     socket.emit("viewer-connected", { 
