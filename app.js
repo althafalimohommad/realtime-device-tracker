@@ -586,29 +586,41 @@ app.post('/api/update-location', isAuthenticated, async function(req, res) {
 // API endpoint for Android app to verify Google OAuth user and get JWT
 app.post('/api/verify-google-user', async function(req, res) {
     try {
-        const { email, name, googleId, idToken } = req.body;
+        let { email, name, googleId, idToken } = req.body;
         
-        if (!email || !googleId) {
-            return res.status(400).json({ success: false, message: 'Email and googleId required' });
-        }
-        
-        console.log(`🔐 Android app login attempt: ${email}`);
-        
-        // Verify Google ID token if provided (recommended for security)
+        // If only idToken is provided, extract user info from it
         if (idToken) {
             try {
                 const payload = await verifyGoogleIdToken(idToken);
-                // Verify the token matches the claimed identity
-                if (payload.sub !== googleId || payload.email !== email) {
-                    console.log(`❌ Token mismatch for: ${email}`);
+                // Extract user info from verified token
+                googleId = googleId || payload.sub;
+                email = email || payload.email;
+                name = name || payload.name;
+                
+                // Verify the token matches the claimed identity (if both provided)
+                if (req.body.googleId && payload.sub !== req.body.googleId) {
+                    console.log(`❌ Token mismatch for googleId`);
+                    return res.status(401).json({ success: false, message: 'Token verification failed' });
+                }
+                if (req.body.email && payload.email !== req.body.email) {
+                    console.log(`❌ Token mismatch for email`);
                     return res.status(401).json({ success: false, message: 'Token verification failed' });
                 }
                 console.log(`✅ Google ID token verified for: ${email}`);
             } catch (tokenError) {
                 console.log(`⚠️ Google ID token verification failed: ${tokenError.message}`);
-                // Continue with legacy flow if token verification fails (backward compatibility)
+                // If token verification fails and no email/googleId provided, reject
+                if (!email || !googleId) {
+                    return res.status(401).json({ success: false, message: 'Invalid or expired Google token' });
+                }
             }
         }
+        
+        if (!email || !googleId) {
+            return res.status(400).json({ success: false, message: 'Email and googleId required (or valid idToken)' });
+        }
+        
+        console.log(`🔐 Android app login attempt: ${email}`);
         
         // Check if user exists in database with this Google ID
         let user = null;
