@@ -145,194 +145,107 @@ fetch('/api/user')
             }, 1000);
         }
         
-        initializeDevice();
+        // Initialize as viewer only - just connect to socket to receive updates
+        initializeViewer();
     })
     .catch(err => {
         console.error('Not authenticated:', err);
         window.location.href = '/login';
     });
 
-async function initializeDevice() {
-    // Request location permission first
-    if (!navigator.geolocation) {
-        alert("Geolocation is not supported by your browser.");
-        return;
-    }
-
-    // Check if THIS device is registered
-    const userAgent = navigator.userAgent;
-    const registeredDevice = currentUser.registeredDevices?.find(d => d.fingerprint === userAgent);
+// Initialize as viewer - website only displays registered devices, doesn't track browser
+async function initializeViewer() {
+    console.log('🖥️ Initializing Find My Device viewer for user:', currentUser.email);
+    console.log('📱 Registered devices:', currentUser.registeredDevices?.length || 0);
     
-    if (!registeredDevice) {
-        console.warn('⚠️ This device is not registered. Location will not be tracked.');
-        deviceName = detectDevice().name;
-        localStorage.setItem('deviceName', deviceName);
-        
-        // Register device but don't track location
-        const detectedDevice = detectDevice();
-        const deviceInfo = {
-            battery: null,
-            charging: false,
-            platform: navigator.platform,
-            userAgent: navigator.userAgent,
-            deviceType: detectedDevice.name,
-            deviceIcon: detectedDevice.icon,
-            isRegistered: false
-        };
-        
-        socket.emit("register-device", { 
-            name: deviceName, 
-            userId: currentUser.id,
-            deviceInfo: deviceInfo,
-            isRegistered: false
-        });
-        
-        return; // Don't track location for unregistered devices
-    }
+    // Just connect to socket to receive real-time updates from registered devices
+    socket.emit("viewer-connected", { 
+        userId: currentUser.id,
+        email: currentUser.email
+    });
+    
+    // Load last known locations for all registered devices
+    loadRegisteredDevices();
+}
 
-    // Request location permission for registered devices only
+// Load all registered devices and their last known locations
+async function loadRegisteredDevices() {
     try {
-        await requestLocationPermission();
-    } catch (error) {
-        console.error('Location permission denied:', error);
-        alert('Please enable location access to use Find My Device.\n\nGo to browser settings → Site permissions → Location → Allow');
-        return;
-    }
-
-    // Use registered device name
-    deviceName = registeredDevice.name;
-    console.log(`📱 Using registered device: ${deviceName}`);
-    localStorage.setItem('deviceName', deviceName);
-
-    // Get device information
-    async function getDeviceInfo() {
-        const detectedDevice = detectDevice();
-        const info = {
-            battery: null,
-            charging: false,
-            platform: navigator.platform,
-            userAgent: navigator.userAgent,
-            screenResolution: `${screen.width}x${screen.height}`,
-            connection: null,
-            deviceType: detectedDevice.name,
-            deviceIcon: detectedDevice.icon
-        };
-
-        // Get battery info
-        if ('getBattery' in navigator) {
-            try {
-                const battery = await navigator.getBattery();
-                info.battery = Math.round(battery.level * 100);
-                info.charging = battery.charging;
-            } catch (err) {
-                console.log('Battery API not available');
-            }
-        }
-
-        // Get connection info
-        if ('connection' in navigator || 'mozConnection' in navigator || 'webkitConnection' in navigator) {
-            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-            info.connection = conn.effectiveType || conn.type || 'unknown';
-        }
-
-        return info;
-    }
-
-    // Register device with user ID and device info
-    getDeviceInfo().then(deviceInfo => {
-        deviceInfo.isRegistered = true; // Mark as registered
+        console.log('📡 Loading registered devices...');
         
-        socket.emit("register-device", { 
-            name: deviceName, 
-            userId: currentUser.id,
-            deviceInfo: deviceInfo,
-            isRegistered: true
+        // Fetch last known locations for all user's registered devices
+        const response = await fetch('/api/last-known-locations');
+        if (!response.ok) {
+            throw new Error('Failed to load device locations');
+        }
+        
+        const locationsData = await response.json();
+        console.log('📍 Loaded locations for', Object.keys(locationsData).length, 'devices');
+        
+        // Display each device on the map
+        Object.entries(locationsData).forEach(([deviceId, location]) => {
+            if (location && location.latitude && location.longitude) {
+                // Add device to map
+                addOrUpdateMarker(deviceId, {
+                    latitude: location.latitude,
+                    longitude: location.longitude,
+                    accuracy: location.accuracy || 50,
+                    battery: location.battery,
+                    charging: location.charging,
+                    timestamp: location.timestamp,
+                    isOffline: !location.online // Mark as offline if not currently connected
+                });
+                
+                // Add to devices map
+                if (!devices.has(deviceId)) {
+                    const registeredDevice = currentUser.registeredDevices?.find(d => d.id === deviceId);
+                    devices.set(deviceId, {
+                        id: deviceId,
+                        name: registeredDevice?.name || location.deviceName || 'Unknown Device',
+                        deviceIcon: registeredDevice?.deviceIcon || '📱',
+                        userId: currentUser.id,
+                        isRegistered: true,
+                        latitude: location.latitude,
+                        longitude: location.longitude,
+                        accuracy: location.accuracy,
+                        battery: location.battery,
+                        charging: location.charging,
+                        lastSeen: location.timestamp,
+                        isOffline: !location.online
+                    });
+                }
+            }
         });
         
-        // Start location tracking immediately after registration
-        startLocationTracking();
-    });
-}
-
-// Request location permission
-async function requestLocationPermission() {
-    return new Promise((resolve, reject) => {
-        // Check if permission was already granted
-        if (navigator.permissions) {
-            navigator.permissions.query({ name: 'geolocation' }).then((result) => {
-                if (result.state === 'granted') {
-                    // Permission already granted, get location
-                    navigator.geolocation.getCurrentPosition(resolve, reject, {
-                        enableHighAccuracy: true,
-                        timeout: 10000,
-                        maximumAge: 0
-                    });
-                } else {
-                    // Show permission modal
-                    showPermissionModal(resolve, reject);
-                }
-            }).catch(() => {
-                // Fallback if permissions API not available
-                showPermissionModal(resolve, reject);
-            });
-        } else {
-            // Fallback for browsers without permissions API
-            showPermissionModal(resolve, reject);
-        }
-    });
-}
-
-// Show location permission modal
-function showPermissionModal(resolve, reject) {
-    const modal = document.getElementById('permission-modal');
-    if (modal) {
-        modal.style.display = 'flex';
+        // Update device list UI
+        updateDeviceList();
         
-        document.getElementById('allow-location-btn').onclick = () => {
-            modal.style.display = 'none';
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    console.log('✅ Location permission granted');
-                    resolve(position);
-                },
-                (error) => {
-                    console.error('❌ Location permission denied:', error);
-                    modal.style.display = 'none';
-                    alert('Location access denied. Please enable it in your browser settings:\n\n1. Click the lock icon in the address bar\n2. Find Location permissions\n3. Select "Allow"');
-                    reject(error);
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0
-                }
-            );
-        };
-        
-        document.getElementById('deny-location-btn').onclick = () => {
-            modal.style.display = 'none';
-            alert('Location access is required to use Find My Device. You can enable it later in browser settings.');
-            reject(new Error('User denied location permission'));
-        };
-    } else {
-        // Fallback if modal not found
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                console.log('✅ Location permission granted');
-                resolve(position);
-            },
-            (error) => {
-                console.error('❌ Location permission denied:', error);
-                reject(error);
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
+        // If devices found, zoom to first device
+        if (devices.size > 0) {
+            const firstDevice = Array.from(devices.values())[0];
+            if (firstDevice.latitude && firstDevice.longitude) {
+                map.setView([firstDevice.latitude, firstDevice.longitude], 13);
+                selectDevice(firstDevice.id);
             }
-        );
+        }
+        
+    } catch (error) {
+        console.error('Error loading registered devices:', error);
+        showToast('Failed to load device locations', 'error');
     }
 }
+
+// ============================================================================
+// LOCATION PERMISSION FUNCTIONS - NOT USED IN WEB VIEWER
+// Web browser does NOT need location permission
+// Only displays locations from registered Android devices
+// ============================================================================
+
+// These functions are kept for reference but not called in viewer mode
+/*
+async function requestLocationPermission() { ... }
+function showPermissionModal(resolve, reject) { ... }
+*/
 
 // Start continuous location tracking
 function startLocationTracking() {
@@ -407,7 +320,7 @@ function startLocationTracking() {
             {
                 enableHighAccuracy: true,
                 timeout: 10000,
-                maximumAge: 30000, // Accept cached position up to 30 seconds old
+                maximumAge: 30000 // Accept cached position up to 30 seconds old
             }
         );
         
@@ -417,6 +330,12 @@ function startLocationTracking() {
         alert("Geolocation is not supported by your browser.");
     }
 }
+
+// ============================================================================
+// BROWSER LOCATION TRACKING DISABLED - WEB VIEWER ONLY
+// The website now only DISPLAYS registered devices from Android app
+// It does NOT track the browser's location
+// ============================================================================
 
 // Helper function to get device info (needed for location tracking)
 async function getDeviceInfo() {
