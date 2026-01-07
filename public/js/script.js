@@ -124,28 +124,8 @@ fetch('/api/user')
         encryptionKey = await encryption.getOrCreateKey(currentUser.id);
         console.log('🔐 End-to-end encryption enabled');
         
-        // Check if THIS device is registered
-        const userAgent = navigator.userAgent;
-        const isThisDeviceRegistered = currentUser.registeredDevices.some(d => d.fingerprint === userAgent);
-        
-        // Always load and show registered devices first
-        loadRegisteredDevicesLocations();
-        
-        if (!isThisDeviceRegistered && window.location.pathname === '/tracker') {
-            const hasOtherDevices = currentUser.registeredDevices && currentUser.registeredDevices.length > 0;
-            const message = hasOtherDevices 
-                ? `This device is not registered yet.\n\nYou have ${currentUser.registeredDevices.length} other registered device(s) that you can track.\n\nWould you like to register this device as well?`
-                : 'This device is not registered. Would you like to register it now?';
-            
-            // Delay the prompt to allow map to load first
-            setTimeout(() => {
-                if (confirm(message)) {
-                    window.location.href = '/register-device';
-                }
-            }, 1000);
-        }
-        
         // Initialize as viewer only - just connect to socket to receive updates
+        // NO device registration popup - web is viewer only
         initializeViewer();
     })
     .catch(err => {
@@ -759,79 +739,17 @@ function updateDeviceList() {
     }
 }
 
-// Load registered devices from database and show their last known locations
+// ============================================================================
+// OLD DUPLICATE FUNCTION - DISABLED
+// This function is replaced by loadRegisteredDevices() in initializeViewer()
+// Keeping for reference only
+// ============================================================================
+/*
 async function loadRegisteredDevicesLocations() {
-    console.log('📍 Loading last known device locations from database...');
-    
-    try {
-        const response = await fetch('/api/last-known-locations');
-        const data = await response.json();
-        
-        console.log('API Response:', data); // Debug log
-        
-        if (!data.devices || data.devices.length === 0) {
-            console.log('No devices with saved locations found');
-            return;
-        }
-        
-        console.log(`Found ${data.devices.length} devices with last known locations`);
-        console.log('Devices from API:', data.devices); // Debug log
-        
-        data.devices.forEach(device => {
-            console.log('Processing offline device:', device); // Debug log
-            
-            // Use fingerprint-based key for offline devices to enable matching when they come online
-            const deviceKey = `offline_${device.fingerprint}`;
-            
-            // Check if this device is already online by fingerprint
-            let isAlreadyOnline = false;
-            devices.forEach((dev, key) => {
-                if (dev.fingerprint === device.fingerprint && !key.startsWith('offline_')) {
-                    isAlreadyOnline = true;
-                    console.log(`Device ${device.name} is already online, skipping offline version`);
-                }
-            });
-            
-            // Only add if not already online
-            if (!isAlreadyOnline) {
-                const deviceData = {
-                    id: device.id,
-                    fingerprint: device.fingerprint,
-                    name: device.name,
-                    deviceIcon: device.icon || '📱',
-                    deviceType: device.type || device.name,
-                    isRegistered: true,
-                    userId: currentUser.id,
-                    latitude: device.latitude,
-                    longitude: device.longitude,
-                    lastSeen: device.lastSeen,
-                    battery: device.battery,
-                    charging: device.charging,
-                    isOffline: true // Mark as offline
-                };
-                devices.set(deviceKey, deviceData);
-                console.log(`Added offline device: ${deviceKey}`, deviceData);
-                
-                // Add marker to map with offline indicator
-                addOrUpdateMarker(deviceKey, {
-                    latitude: device.latitude,
-                    longitude: device.longitude,
-                    accuracy: device.accuracy || 50,
-                    battery: device.battery,
-                    charging: device.charging,
-                    timestamp: device.lastSeen,
-                    isOffline: true
-                });
-                console.log(`Added marker for offline device: ${device.name}`);
-            }
-        });
-        
-        // Update device list to show both online and offline devices
-        updateDeviceList();
-    } catch (error) {
-        console.error('Error loading last known locations:', error);
-    }
+    // This function caused duplicate devices to appear
+    // Now using loadRegisteredDevices() instead
 }
+*/
 
 // Helper function to add or update marker on map
 function addOrUpdateMarker(deviceId, locationData) {
