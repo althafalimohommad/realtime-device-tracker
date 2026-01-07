@@ -62,6 +62,11 @@ public class ApiClient {
             String deviceName = prefs.getString("deviceName", "Android Device");
             String fingerprint = prefs.getString("deviceFingerprint", "");
 
+            // Debug logging
+            Log.d(TAG, "Reading JWT from prefs: " + 
+                    (jwt != null ? jwt.substring(0, Math.min(50, jwt.length())) + "..." : "NULL"));
+            Log.d(TAG, "UserId from prefs: " + userId);
+
             if (jwt == null || userId == null) {
                 Log.e(TAG, "JWT or userId missing");
                 callback.onError("User not logged in");
@@ -69,8 +74,12 @@ public class ApiClient {
             }
 
             // Validate JWT format (must have 3 parts separated by dots)
-            if (!jwt.contains(".") || jwt.split("\\.").length != 3) {
-                Log.e(TAG, "Invalid JWT format - clearing auth data");
+            String[] jwtParts = jwt.split("\\.");
+            Log.d(TAG, "JWT parts count: " + jwtParts.length);
+            
+            if (!jwt.contains(".") || jwtParts.length != 3) {
+                Log.e(TAG, "Invalid JWT format (parts=" + jwtParts.length + ") - clearing auth data");
+                Log.e(TAG, "Invalid token value: " + jwt);
                 prefs.edit()
                         .remove("jwt")
                         .remove("userId")

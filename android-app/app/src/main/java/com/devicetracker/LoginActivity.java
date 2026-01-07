@@ -176,16 +176,41 @@ public class LoginActivity extends AppCompatActivity {
                         String name = res.getString("name");
                         String email = res.optString("email", "");
 
+                        // Debug logging
+                        Log.d(TAG, "Received JWT (first 50 chars): " + 
+                                (jwt != null ? jwt.substring(0, Math.min(50, jwt.length())) : "NULL"));
+                        Log.d(TAG, "JWT has dots: " + (jwt != null && jwt.contains(".")));
+                        Log.d(TAG, "UserId: " + userId);
+
+                        // Validate JWT format before saving
+                        if (jwt == null || !jwt.contains(".") || jwt.split("\\.").length != 3) {
+                            Log.e(TAG, "Invalid JWT received from server!");
+                            runOnUiThread(() -> {
+                                setLoading(false);
+                                showError("Invalid token from server");
+                            });
+                            return;
+                        }
+
                         // ✅ SAVE AUTH CORRECTLY
                         SharedPreferences prefs =
                                 getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
 
+                        // Clear old data first
+                        prefs.edit().clear().apply();
+
+                        // Save new auth data
                         prefs.edit()
                                 .putString("jwt", jwt)
                                 .putString("userId", userId)
                                 .putString("userName", name)
                                 .putString("userEmail", email)
                                 .apply();
+
+                        // Verify save
+                        String savedJwt = prefs.getString("jwt", "NOT_SAVED");
+                        Log.d(TAG, "Saved JWT (first 50 chars): " + 
+                                savedJwt.substring(0, Math.min(50, savedJwt.length())));
 
                         runOnUiThread(() -> {
                             setLoading(false);
