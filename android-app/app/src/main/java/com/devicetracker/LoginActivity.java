@@ -33,207 +33,197 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class LoginActivity extends AppCompatActivity {
+
     private static final String TAG = "LoginActivity";
     private static final int RC_SIGN_IN = 9001;
-    // Use same prefs as MainActivity/Service so userId is available for tracking
+
     private static final String PREFS_NAME = "DeviceTracker";
-    private static final String SERVER_URL = "https://realtime-device-tracker-s9ua.onrender.com";
-    private static final String SERVER_CLIENT_ID = "31793728596-s6g87ot3785i62i48s7emh2nk3cbk6dv.apps.googleusercontent.com"; // Web client ID
-    
-    private GoogleSignInClient mGoogleSignInClient;
+    private static final String SERVER_URL =
+            "https://realtime-device-tracker-s9ua.onrender.com";
+    private static final String SERVER_CLIENT_ID =
+            "31793728596-s6g87ot3785i62i48s7emh2nk3cbk6dv.apps.googleusercontent.com";
+
+    private GoogleSignInClient googleSignInClient;
+    private OkHttpClient httpClient;
+
     private Button btnSignIn;
     private ProgressBar progressBar;
     private TextView tvStatus;
-    private OkHttpClient httpClient;
+
+    // ===============================
+    // ACTIVITY LIFECYCLE
+    // ===============================
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
-        // Check if already logged in
+
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        String userId = prefs.getString("userId", null);
-        String userName = prefs.getString("userName", null);
-        
-        if (userId != null && userName != null) {
-            // Already logged in, go to MainActivity
-            navigateToMainActivity(userId, userName);
+
+        // 🔐 If already logged in, skip login
+        if (prefs.getString("jwt", null) != null &&
+            prefs.getString("userId", null) != null) {
+            navigateToMainActivity();
             return;
         }
-        
+
         setContentView(R.layout.activity_login);
-        
+
         btnSignIn = findViewById(R.id.btnSignIn);
         progressBar = findViewById(R.id.progressBar);
         tvStatus = findViewById(R.id.tvStatus);
-        
+
         httpClient = new OkHttpClient();
-        
-        // Configure Google Sign-In
-        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestEmail()
-            .requestId()
-            .requestProfile()
-            .requestIdToken(SERVER_CLIENT_ID)
-            .build();
-        
-        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
-        
-        btnSignIn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                signIn();
-            }
-        });
+
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(
+                GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .requestIdToken(SERVER_CLIENT_ID) // WEB CLIENT ID
+                .build();
+
+        googleSignInClient = GoogleSignIn.getClient(this, gso);
+
+        btnSignIn.setOnClickListener(v -> startGoogleLogin());
     }
 
-    private void signIn() {
-        Intent signInIntent = mGoogleSignInClient.getSignInIntent();
-        startActivityForResult(signInIntent, RC_SIGN_IN);
+    // ===============================
+    // GOOGLE LOGIN
+    // ===============================
+
+    private void startGoogleLogin() {
         setLoading(true);
+        Intent signInIntent = googleSignInClient.getSignInIntent();
+        startActivityForResult(signInIntent, RC_SIGN_IN);
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+    protected void onActivityResult(
+            int requestCode,
+            int resultCode,
+            @Nullable Intent data
+    ) {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (requestCode == RC_SIGN_IN) {
-            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+            Task<GoogleSignInAccount> task =
+                    GoogleSignIn.getSignedInAccountFromIntent(data);
             try {
-                GoogleSignInAccount account = task.getResult(ApiException.class);
-                handleSignInResult(account);
+                GoogleSignInAccount account =
+                        task.getResult(ApiException.class);
+                sendTokenToBackend(account);
             } catch (ApiException e) {
-                Log.e(TAG, "Google sign in failed", e);
+                Log.e(TAG, "Google sign-in failed", e);
                 setLoading(false);
-                tvStatus.setText("Sign in failed: " + e.getMessage());
-                Toast.makeText(this, "Sign in failed", Toast.LENGTH_SHORT).show();
+                showError("Google sign-in failed");
             }
         }
     }
 
-    private void handleSignInResult(GoogleSignInAccount account) {
-        if (account != null) {
-            String email = account.getEmail();
-            String name = account.getDisplayName();
-            String googleId = account.getId();
-            String idToken = account.getIdToken();
-            
-            Log.d(TAG, "Signed in: " + email);
-            tvStatus.setText("Verifying with server...");
-            
-            // Verify with backend server
-            verifyWithServer(email, name, googleId, idToken);
-        } else {
-            setLoading(false);
-            tvStatus.setText("Sign in failed");
-        }
-    }
+    // ===============================
+    // BACKEND VERIFICATION
+    // ===============================
 
-    private void verifyWithServer(String email, String name, String googleId, String idToken) {
+    private void sendTokenToBackend(GoogleSignInAccount account) {
+
+        if (account == null || account.getIdToken() == null) {
+            setLoading(false);
+            showError("Invalid Google account");
+            return;
+        }
+
         try {
             JSONObject json = new JSONObject();
-            json.put("email", email);
-            json.put("name", name);
-            json.put("googleId", googleId);
-            json.put("idToken", idToken);  // Send Google ID token for server-side verification
-            
+            json.put("idToken", account.getIdToken());
+
             RequestBody body = RequestBody.create(
-                json.toString(),
-                MediaType.parse("application/json; charset=utf-8")
+                    json.toString(),
+                    MediaType.get("application/json; charset=utf-8")
             );
-            
-                Request request = new Request.Builder()
+
+            Request request = new Request.Builder()
                     .url(SERVER_URL + "/api/verify-google-user")
                     .post(body)
                     .build();
-            
+
             httpClient.newCall(request).enqueue(new Callback() {
+
                 @Override
                 public void onFailure(Call call, IOException e) {
-                    Log.e(TAG, "Server verification failed", e);
                     runOnUiThread(() -> {
                         setLoading(false);
-                        tvStatus.setText("Server connection failed");
-                        Toast.makeText(LoginActivity.this, "Cannot connect to server", Toast.LENGTH_SHORT).show();
+                        showError("Server connection failed");
                     });
                 }
 
                 @Override
-                public void onResponse(Call call, Response response) throws IOException {
-                    String responseBody = response.body().string();
-                    
-                    if (response.isSuccessful()) {
-                        try {
-                            JSONObject jsonResponse = new JSONObject(responseBody);
-                            String userId = jsonResponse.getString("userId");
-                            String userName = jsonResponse.getString("name");
-                            
-                            // Get the backend JWT token (long-lived, 7 days)
-                            String backendToken = jsonResponse.optString("token", "");
-                            long tokenExpiry = jsonResponse.optLong("tokenExpiry", 0);
-                            
-                            // Save user info and backend JWT
-                            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                            SharedPreferences.Editor editor = prefs.edit();
-                            editor.putString("userId", userId);
-                            editor.putString("userName", userName);
-                            editor.putString("userEmail", email);
-                            
-                            // Store backend JWT (preferred) for background location updates
-                            if (!backendToken.isEmpty()) {
-                                editor.putString("authToken", backendToken);  // Backend JWT
-                                editor.putLong("tokenExpiry", tokenExpiry);
-                                Log.d(TAG, "Backend JWT token stored, expires at: " + tokenExpiry);
-                            }
-                            
-                            // Also store Google ID token as fallback
-                            editor.putString("idToken", idToken);
-                            editor.apply();
-                            
-                            Log.d(TAG, "User verified: " + userId);
-                            
-                            runOnUiThread(() -> {
-                                setLoading(false);
-                                tvStatus.setText("Login successful!");
-                                navigateToMainActivity(userId, userName);
-                            });
-                            
-                        } catch (Exception e) {
-                            Log.e(TAG, "Error parsing response", e);
-                            runOnUiThread(() -> {
-                                setLoading(false);
-                                tvStatus.setText("Server error");
-                                Toast.makeText(LoginActivity.this, "Server error", Toast.LENGTH_SHORT).show();
-                            });
-                        }
-                    } else {
-                        Log.e(TAG, "Server returned error: " + responseBody);
+                public void onResponse(Call call, Response response)
+                        throws IOException {
+
+                    if (!response.isSuccessful()) {
                         runOnUiThread(() -> {
                             setLoading(false);
-                            tvStatus.setText("Authentication failed");
-                            Toast.makeText(LoginActivity.this, "Not authorized", Toast.LENGTH_SHORT).show();
+                            showError("Authentication failed");
+                        });
+                        return;
+                    }
+
+                    try {
+                        JSONObject res =
+                                new JSONObject(response.body().string());
+
+                        String jwt = res.getString("token");
+                        String userId = res.getString("userId");
+                        String name = res.getString("name");
+                        String email = res.optString("email", "");
+
+                        // ✅ SAVE AUTH CORRECTLY
+                        SharedPreferences prefs =
+                                getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+
+                        prefs.edit()
+                                .putString("jwt", jwt)
+                                .putString("userId", userId)
+                                .putString("userName", name)
+                                .putString("userEmail", email)
+                                .apply();
+
+                        runOnUiThread(() -> {
+                            setLoading(false);
+                            navigateToMainActivity();
+                        });
+
+                    } catch (Exception e) {
+                        Log.e(TAG, "Parsing error", e);
+                        runOnUiThread(() -> {
+                            setLoading(false);
+                            showError("Invalid server response");
                         });
                     }
                 }
             });
-            
+
         } catch (Exception e) {
-            Log.e(TAG, "Error creating request", e);
             setLoading(false);
-            tvStatus.setText("Error occurred");
+            showError("Login failed");
         }
     }
+
+    // ===============================
+    // UI HELPERS
+    // ===============================
 
     private void setLoading(boolean loading) {
         btnSignIn.setEnabled(!loading);
         progressBar.setVisibility(loading ? View.VISIBLE : View.GONE);
     }
 
-    private void navigateToMainActivity(String userId, String userName) {
-        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-        intent.putExtra("userId", userId);
-        intent.putExtra("userName", userName);
-        startActivity(intent);
+    private void showError(String message) {
+        tvStatus.setText(message);
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+
+    private void navigateToMainActivity() {
+        startActivity(new Intent(this, MainActivity.class));
         finish();
     }
 }
