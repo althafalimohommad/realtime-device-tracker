@@ -266,6 +266,22 @@ const devices = new Map();
 io.on("connection", function(socket) {
     console.log("Device connected:", socket.id);
     
+    // Handle viewer connection (web browsers just viewing, not tracking)
+    socket.on("viewer-connected", function(data) {
+        const { userId, email } = data;
+        console.log(`👁️  Viewer connected: ${email} (${socket.id})`);
+        
+        // Join user room to receive real-time device updates
+        if (userId) {
+            socket.join(`user_${userId}`);
+            
+            // Send currently online registered devices
+            const userDevices = Array.from(devices.values())
+                .filter(d => d.userId === userId && d.isRegistered === true);
+            socket.emit("devices-update", userDevices);
+        }
+    });
+    
     // Handle device registration with name, user, and device info
     socket.on("register-device", async function(data) {
         const device = {
