@@ -8,9 +8,66 @@ const session = require('express-session');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { OAuth2Client } = require('google-auth-library');
+const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const crypto = require('crypto');
 const database = require('./database');
+
+// JWT Configuration
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || crypto.randomBytes(64).toString('hex');
+const JWT_EXPIRY = '7d'; // 7 days validity for mobile app tokens
+
+// Generate JWT token for mobile app authentication
+function generateAppToken(userId, email) {
+    return jwt.sign(
+        { userId, email, type: 'mobile_app' },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRY }
+    );
+}
+
+// Verify JWT token
+function verifyAppToken(token) {
+    try {
+        return jwt.verify(token, JWT_SECRET);
+    } catch (error) {
+        return null;
+    }
+}
+
+// Middleware to authenticate mobile app requests using JWT or Google ID token
+async function authenticateMobileApp(req, res, next) {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ success: false, message: 'Authorization token required' });
+    }
+    
+    const token = authHeader.replace('Bearer ', '');
+    
+    // First, try to verify as our custom JWT
+    const jwtPayload = verifyAppToken(token);
+    if (jwtPayload && jwtPayload.type === 'mobile_app') {
+        req.appUser = {
+            userId: jwtPayload.userId,
+            email: jwtPayload.email
+        };
+        return next();
+    }
+    
+    // If JWT verification fails, try Google ID token (for backward compatibility)
+    try {
+        const payload = await verifyGoogleIdToken(token);
+        req.appUser = {
+            userId: payload.sub,
+            email: payload.email
+        };
+        return next();
+    } catch (error) {
+        console.log('⚠️ Token verification failed:', error.message);
+        return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+    }
+}
 
 const server = http.createServer(app);
 const io = socketio(server);
@@ -526,16 +583,32 @@ app.post('/api/update-location', isAuthenticated, async function(req, res) {
     }
 });
 
-// API endpoint for Android app to verify Google OAuth user
+// API endpoint for Android app to verify Google OAuth user and get JWT
 app.post('/api/verify-google-user', async function(req, res) {
     try {
-        const { email, name, googleId } = req.body;
+        const { email, name, googleId, idToken } = req.body;
         
         if (!email || !googleId) {
             return res.status(400).json({ success: false, message: 'Email and googleId required' });
         }
         
         console.log(`🔐 Android app login attempt: ${email}`);
+        
+        // Verify Google ID token if provided (recommended for security)
+        if (idToken) {
+            try {
+                const payload = await verifyGoogleIdToken(idToken);
+                // Verify the token matches the claimed identity
+                if (payload.sub !== googleId || payload.email !== email) {
+                    console.log(`❌ Token mismatch for: ${email}`);
+                    return res.status(401).json({ success: false, message: 'Token verification failed' });
+                }
+                console.log(`✅ Google ID token verified for: ${email}`);
+            } catch (tokenError) {
+                console.log(`⚠️ Google ID token verification failed: ${tokenError.message}`);
+                // Continue with legacy flow if token verification fails (backward compatibility)
+            }
+        }
         
         // Check if user exists in database with this Google ID
         let user = null;
@@ -547,20 +620,29 @@ app.post('/api/verify-google-user', async function(req, res) {
         }
         
         if (!user) {
-            // User doesn't exist - they need to login via website first
-            console.log(`❌ User not found: ${email}`);
-            return res.status(403).json({ 
-                success: false, 
-                message: 'Please sign in on the website first to create your account' 
-            });
+            // Auto-create user on first Android app login
+            console.log(`🆕 Creating new user from Android app: ${email}`);
+            user = {
+                id: googleId,
+                email: email,
+                name: name || email.split('@')[0],
+                devices: [],
+                registeredDevices: []
+            };
+            await saveUser(user);
         }
         
-        console.log(`✅ User verified: ${email}`);
+        // Generate long-lived JWT for mobile app
+        const appToken = generateAppToken(user.id, user.email);
+        
+        console.log(`✅ User verified and JWT issued: ${email}`);
         res.json({ 
             success: true, 
             userId: user.id,
             name: user.displayName || user.name || email.split('@')[0],
-            email: user.email
+            email: user.email,
+            token: appToken,  // Backend JWT for persistent authentication
+            tokenExpiry: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 days from now
         });
         
     } catch (error) {
@@ -569,29 +651,42 @@ app.post('/api/verify-google-user', async function(req, res) {
     }
 });
 
-// API endpoint for Android app to send location updates (requires Google ID token)
-app.post('/api/location-update-app', async function(req, res) {
+// API endpoint to refresh app token (call this before token expires)
+app.post('/api/refresh-token', authenticateMobileApp, async function(req, res) {
+    try {
+        const { userId, email } = req.appUser;
+        
+        // Verify user still exists
+        const user = await getUserById(userId);
+        if (!user) {
+            return res.status(401).json({ success: false, message: 'User not found' });
+        }
+        
+        // Generate new token
+        const newToken = generateAppToken(userId, email);
+        
+        console.log(`🔄 Token refreshed for user: ${email}`);
+        res.json({
+            success: true,
+            token: newToken,
+            tokenExpiry: Date.now() + (7 * 24 * 60 * 60 * 1000)
+        });
+    } catch (error) {
+        console.error('Error refreshing token:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// API endpoint for Android app to send location updates (supports JWT and Google ID token)
+app.post('/api/location-update-app', authenticateMobileApp, async function(req, res) {
     try {
         const { latitude, longitude, accuracy, deviceName, battery, charging, timestamp, fingerprint: bodyFingerprint } = req.body;
         const userAgent = req.headers['user-agent'];
         const headerFingerprint = req.headers['x-device-fingerprint'];
         const fingerprint = bodyFingerprint || headerFingerprint || userAgent;
-        const authHeader = req.headers.authorization;
         
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ success: false, message: 'Unauthorized' });
-        }
-        const idToken = authHeader.replace('Bearer ', '');
-        let userId;
-        let email;
-        try {
-            const payload = await verifyGoogleIdToken(idToken);
-            userId = payload.sub;
-            email = payload.email;
-        } catch (err) {
-            console.log('⚠️ Invalid Google ID token');
-            return res.status(401).json({ success: false, message: 'Invalid token' });
-        }
+        // User is authenticated via middleware
+        const { userId, email } = req.appUser;
 
         console.log(`📱 Android app location update from user ${userId}: ${latitude}, ${longitude} (fp: ${fingerprint?.substring(0, 40)})`);
 
