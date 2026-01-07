@@ -185,41 +185,44 @@ async function loadRegisteredDevices() {
             throw new Error('Failed to load device locations');
         }
         
-        const locationsData = await response.json();
-        console.log('📍 Loaded locations for', Object.keys(locationsData).length, 'devices');
+        const data = await response.json();
+        const devicesList = data.devices || [];
         
-        // Display each device on the map
-        Object.entries(locationsData).forEach(([deviceId, location]) => {
-            if (location && location.latitude && location.longitude) {
-                // Add device to map
-                addOrUpdateMarker(deviceId, {
-                    latitude: location.latitude,
-                    longitude: location.longitude,
-                    accuracy: location.accuracy || 50,
-                    battery: location.battery,
-                    charging: location.charging,
-                    timestamp: location.timestamp,
-                    isOffline: !location.online // Mark as offline if not currently connected
+        console.log('📍 Loaded', devicesList.length, 'registered devices');
+        console.log('📍 Devices with location:', devicesList.filter(d => d.hasLocation).length);
+        
+        // Display each device
+        devicesList.forEach(device => {
+            console.log(`📱 Device: ${device.name}, Has location: ${device.hasLocation}`);
+            
+            // Add to devices map
+            devices.set(device.id, {
+                id: device.id,
+                name: device.name,
+                deviceIcon: device.icon || '📱',
+                userId: currentUser.id,
+                isRegistered: true,
+                fingerprint: device.fingerprint,
+                latitude: device.latitude,
+                longitude: device.longitude,
+                accuracy: device.accuracy,
+                battery: device.battery,
+                charging: device.charging,
+                lastSeen: device.lastSeen,
+                isOffline: !device.isOnline
+            });
+            
+            // Add marker if device has location
+            if (device.hasLocation && device.latitude && device.longitude) {
+                addOrUpdateMarker(device.id, {
+                    latitude: device.latitude,
+                    longitude: device.longitude,
+                    accuracy: device.accuracy || 50,
+                    battery: device.battery,
+                    charging: device.charging,
+                    timestamp: device.lastSeen,
+                    isOffline: !device.isOnline
                 });
-                
-                // Add to devices map
-                if (!devices.has(deviceId)) {
-                    const registeredDevice = currentUser.registeredDevices?.find(d => d.id === deviceId);
-                    devices.set(deviceId, {
-                        id: deviceId,
-                        name: registeredDevice?.name || location.deviceName || 'Unknown Device',
-                        deviceIcon: registeredDevice?.deviceIcon || '📱',
-                        userId: currentUser.id,
-                        isRegistered: true,
-                        latitude: location.latitude,
-                        longitude: location.longitude,
-                        accuracy: location.accuracy,
-                        battery: location.battery,
-                        charging: location.charging,
-                        lastSeen: location.timestamp,
-                        isOffline: !location.online
-                    });
-                }
             }
         });
         
