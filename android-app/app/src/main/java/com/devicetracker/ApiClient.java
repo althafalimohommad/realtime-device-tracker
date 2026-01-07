@@ -68,6 +68,19 @@ public class ApiClient {
                 return;
             }
 
+            // Validate JWT format (must have 3 parts separated by dots)
+            if (!jwt.contains(".") || jwt.split("\\.").length != 3) {
+                Log.e(TAG, "Invalid JWT format - clearing auth data");
+                prefs.edit()
+                        .remove("jwt")
+                        .remove("userId")
+                        .remove("userName")
+                        .remove("userEmail")
+                        .apply();
+                callback.onError("Invalid token - please re-login");
+                return;
+            }
+
             JSONObject json = new JSONObject();
             json.put("latitude", latitude);
             json.put("longitude", longitude);
@@ -106,17 +119,19 @@ public class ApiClient {
                         Log.d(TAG, "Location sent successfully");
                         callback.onSuccess(resBody);
                     } else if (response.code() == 401) {
-                        Log.w(TAG, "JWT expired or invalid");
+                        Log.w(TAG, "JWT expired or invalid - clearing auth data");
 
-                        // Clear auth → force re-login
+                        // Clear ALL auth data → force re-login
                         prefs.edit()
                                 .remove("jwt")
                                 .remove("userId")
+                                .remove("userName")
+                                .remove("userEmail")
                                 .apply();
 
-                        callback.onError("Authentication expired");
+                        callback.onError("Authentication expired - please re-login");
                     } else {
-                        Log.e(TAG, "Server error " + response.code());
+                        Log.e(TAG, "Server error " + response.code() + ": " + resBody);
                         callback.onError("Server error: " + response.code());
                     }
                 }

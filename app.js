@@ -45,27 +45,39 @@ async function authenticateMobileApp(req, res, next) {
     
     const token = authHeader.replace('Bearer ', '');
     
-    // First, try to verify as our custom JWT
-    const jwtPayload = verifyAppToken(token);
-    if (jwtPayload && jwtPayload.type === 'mobile_app') {
-        req.appUser = {
-            userId: jwtPayload.userId,
-            email: jwtPayload.email
-        };
-        return next();
-    }
-    
-    // If JWT verification fails, try Google ID token (for backward compatibility)
-    try {
-        const payload = await verifyGoogleIdToken(token);
-        req.appUser = {
-            userId: payload.sub,
-            email: payload.email
-        };
-        return next();
-    } catch (error) {
-        console.log('⚠️ Token verification failed:', error.message);
-        return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+    // Check if token looks like a JWT (3 parts separated by dots)
+    const tokenParts = token.split('.');
+    if (tokenParts.length === 3) {
+        // Try to verify as our custom JWT
+        const jwtPayload = verifyAppToken(token);
+        if (jwtPayload && jwtPayload.type === 'mobile_app') {
+            req.appUser = {
+                userId: jwtPayload.userId,
+                email: jwtPayload.email
+            };
+            return next();
+        }
+        
+        // If our JWT fails, try Google ID token (also has 3 parts)
+        try {
+            const payload = await verifyGoogleIdToken(token);
+            req.appUser = {
+                userId: payload.sub,
+                email: payload.email
+            };
+            return next();
+        } catch (error) {
+            console.log('⚠️ Token verification failed:', error.message);
+            return res.status(401).json({ success: false, message: 'Invalid or expired token - please re-login' });
+        }
+    } else {
+        // Token doesn't look like JWT - likely old format or corrupted
+        console.log(`⚠️ Token verification failed: Wrong number of segments in token: ${token.substring(0, 30)}...`);
+        return res.status(401).json({ 
+            success: false, 
+            message: 'Invalid token format - please logout and login again',
+            code: 'INVALID_TOKEN_FORMAT'
+        });
     }
 }
 
