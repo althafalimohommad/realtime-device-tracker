@@ -1154,6 +1154,31 @@ initializeDatabase().then(() => {
     server.listen(PORT, () => {
         console.log(`🚀 Server listening on port ${PORT}`);
         console.log(`📊 Database: ${useMongoDb ? 'MongoDB Atlas (Cloud)' : 'Local File Storage'}`);
+        
+        // Keep-alive ping to prevent Render free tier from sleeping (runs every 14 minutes)
+        // Only run in production (not on localhost)
+        const isProduction = process.env.NODE_ENV === 'production' || process.env.CALLBACK_URL?.includes('render.com') || process.env.CALLBACK_URL?.includes('railway.app');
+        
+        if (isProduction) {
+            const appUrl = process.env.CALLBACK_URL?.replace('/auth/google/callback', '') || `https://realtime-device-tracker-s9ua.onrender.com`;
+            
+            setInterval(async () => {
+                try {
+                    const https = require('https');
+                    https.get(appUrl, (res) => {
+                        console.log(`⏰ Keep-alive ping sent to ${appUrl} - Status: ${res.statusCode}`);
+                    }).on('error', (err) => {
+                        console.log('⚠️ Keep-alive ping failed:', err.message);
+                    });
+                } catch (error) {
+                    console.log('⚠️ Keep-alive error:', error.message);
+                }
+            }, 14 * 60 * 1000); // 14 minutes (before 15-min timeout)
+            
+            console.log('⏰ Keep-alive service activated (pings every 14 minutes to prevent sleep)');
+        } else {
+            console.log('💻 Running in development mode - keep-alive disabled');
+        }
     });
 }).catch(error => {
     console.error('Failed to initialize database:', error);
