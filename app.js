@@ -1,6 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const app = express();
+
+// Behind Render/HTTPS proxy: trust proxy so secure cookies are set
+app.set('trust proxy', 1);
 const path = require('path');
 const http = require("http");
 const socketio = require("socket.io");
