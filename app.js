@@ -1364,9 +1364,11 @@ app.get('/api/admin/users', isAdmin, async function(req, res) {
                     icon: device.icon || '📱',
                     type: device.type,
                     model: device.model,
-                    latitude: device.latitude,
-                    longitude: device.longitude,
-                    lastLocationUpdate: device.lastLocationUpdate,
+                    // Use the most recent location fields (Android uses lastLatitude/lastLongitude)
+                    latitude: device.lastLatitude || device.latitude || null,
+                    longitude: device.lastLongitude || device.longitude || null,
+                    accuracy: device.lastAccuracy || device.accuracy || null,
+                    lastLocationUpdate: device.lastSeen || device.lastLocationUpdate || null,
                     registeredAt: device.registeredAt
                 }))
             }))
