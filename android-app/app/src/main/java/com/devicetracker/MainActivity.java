@@ -11,6 +11,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -30,13 +31,15 @@ public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_CODE = 1001;
     private static final String PREFS_NAME = "DeviceTracker";
     
-    private TextView tvWelcome, tvEmail, tvUserInfo, statusText;
+    private TextView tvDeviceName, tvDeviceStatus, statusText, btnProfile;
     private EditText deviceNameInput;
-    private Button registerButton, unregisterButton, btnLogout;
+    private Button registerButton, btnLogout;
+    private View deviceCard, emptyState;
     private SharedPreferences prefs;
     private String userId;
     private String userName;
     private String userEmail;
+    private String pendingDeviceName;
     private GoogleSignInClient mGoogleSignInClient;
     
     @Override
@@ -65,63 +68,56 @@ public class MainActivity extends AppCompatActivity {
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
         
-        tvWelcome = findViewById(R.id.tvWelcome);
-        tvEmail = findViewById(R.id.tvEmail);
-        tvUserInfo = findViewById(R.id.tvUserInfo);
+        deviceCard = findViewById(R.id.deviceCard);
+        emptyState = findViewById(R.id.emptyState);
+        tvDeviceName = findViewById(R.id.tvDeviceName);
+        tvDeviceStatus = findViewById(R.id.tvDeviceStatus);
         deviceNameInput = findViewById(R.id.deviceNameInput);
         registerButton = findViewById(R.id.registerButton);
-        unregisterButton = findViewById(R.id.unregisterButton);
         statusText = findViewById(R.id.statusText);
         btnLogout = findViewById(R.id.btnLogout);
-        
-        // Display user info
-        tvWelcome.setText("Welcome, " + userName + "!");
-        tvEmail.setText(userEmail);
-        tvUserInfo.setText("User ID: " + userId);
+        btnProfile = findViewById(R.id.btnProfile);
         
         updateUI();
         
-        registerButton.setOnClickListener(v -> requestPermissionsAndRegister());
-        unregisterButton.setOnClickListener(v -> unregisterDevice());
+        registerButton.setOnClickListener(v -> promptForDeviceName(false));
         btnLogout.setOnClickListener(v -> logout());
+        deviceCard.setOnClickListener(v -> showDeviceOptions());
+        btnProfile.setOnClickListener(v -> showProfileMenu());
     }
     
     private void updateUI() {
         boolean isRegistered = prefs.getBoolean("isRegistered", false);
         String deviceName = prefs.getString("deviceName", "");
         String fingerprint = prefs.getString("deviceFingerprint", "");
-        
+
+        // Avatar initial
+        String initial = (userName != null && !userName.isEmpty()) ? userName.substring(0, 1).toUpperCase() : "U";
+        btnProfile.setText(initial);
+
         if (isRegistered) {
-            deviceNameInput.setEnabled(false);
-            deviceNameInput.setText(deviceName);
+            deviceCard.setVisibility(View.VISIBLE);
+            emptyState.setVisibility(View.GONE);
             registerButton.setVisibility(View.GONE);
-            unregisterButton.setVisibility(View.VISIBLE);
-            
-            statusText.setText("✅ Device Registered\n" +
-                    "Name: " + deviceName + "\n" +
-                    "Fingerprint: " + fingerprint.substring(0, Math.min(16, fingerprint.length())) + "...\n" +
-                    "Status: Tracking location in background...");
-            statusText.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
+            tvDeviceName.setText(deviceName);
+            tvDeviceStatus.setText("This device");
+            String fpShort = fingerprint != null ? fingerprint.substring(0, Math.min(10, fingerprint.length())) : "";
+            statusText.setText("Tracking active · " + fpShort + "…");
         } else {
-            deviceNameInput.setEnabled(true);
-            deviceNameInput.setText("");
-            deviceNameInput.setHint("Enter device name (e.g., My Phone)");
+            deviceCard.setVisibility(View.GONE);
+            emptyState.setVisibility(View.VISIBLE);
             registerButton.setVisibility(View.VISIBLE);
-            unregisterButton.setVisibility(View.GONE);
-            statusText.setText("⚠️ Device Not Registered\nRegister to start tracking");
-            statusText.setTextColor(getResources().getColor(android.R.color.holo_orange_dark));
+            statusText.setText("Not registered. Tap Register device to start tracking.");
         }
     }
     
-    private void requestPermissionsAndRegister() {
-        String deviceName = deviceNameInput.getText().toString().trim();
-        
-        if (deviceName.isEmpty()) {
+    private void requestPermissionsAndRegister(String deviceName) {
+        if (deviceName == null || deviceName.trim().isEmpty()) {
             Toast.makeText(this, "Please enter a device name", Toast.LENGTH_SHORT).show();
             return;
         }
-        
-        // Check if we have fine location permission
+        pendingDeviceName = deviceName;
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
@@ -162,17 +158,15 @@ public class MainActivity extends AppCompatActivity {
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         
-        String deviceName = deviceNameInput.getText().toString().trim();
-        
         if (requestCode == PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                requestBackgroundLocationPermission(deviceName);
+                requestBackgroundLocationPermission(pendingDeviceName);
             } else {
                 Toast.makeText(this, "Location permission is required", Toast.LENGTH_LONG).show();
             }
         } else if (requestCode == PERMISSION_REQUEST_CODE + 1) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                registerDevice(deviceName);
+                registerDevice(pendingDeviceName);
             } else {
                 new AlertDialog.Builder(this)
                         .setTitle("Permission Required")
@@ -192,30 +186,34 @@ public class MainActivity extends AppCompatActivity {
     private void registerDevice(String deviceName) {
         // Generate device fingerprint
         String fingerprint = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
-        
+
         // Save registration
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString("deviceName", deviceName);
         editor.putString("deviceFingerprint", fingerprint);
         editor.putBoolean("isRegistered", true);
         editor.apply();
-        
-        // Start location tracking service
+
+        // Start/update location tracking service
+        startTrackingService(deviceName, fingerprint);
+
+        updateUI();
+        Toast.makeText(this, "Device registered! Tracking started.", Toast.LENGTH_LONG).show();
+
+        Log.d(TAG, "Device registered: " + deviceName + " (User: " + userId + ")");
+    }
+
+    private void startTrackingService(String deviceName, String fingerprint) {
         Intent serviceIntent = new Intent(this, LocationTrackingService.class);
         serviceIntent.putExtra("userId", userId);
         serviceIntent.putExtra("deviceName", deviceName);
         serviceIntent.putExtra("fingerprint", fingerprint);
-        
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent);
         } else {
             startService(serviceIntent);
         }
-        
-        updateUI();
-        Toast.makeText(this, "Device registered! Tracking started.", Toast.LENGTH_LONG).show();
-        
-        Log.d(TAG, "Device registered: " + deviceName + " (User: " + userId + ")");
     }
     
     private void unregisterDevice() {
@@ -238,6 +236,78 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(MainActivity.this, "Device unregistered", Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("No", null)
+                .show();
+    }
+
+    private void showDeviceOptions() {
+        boolean isRegistered = prefs.getBoolean("isRegistered", false);
+        if (!isRegistered) {
+            promptForDeviceName(false);
+            return;
+        }
+
+        String[] options = {"Edit device name", "Unregister device"};
+        new AlertDialog.Builder(this)
+                .setTitle("This device")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        promptForDeviceName(true);
+                    } else if (which == 1) {
+                        unregisterDevice();
+                    }
+                })
+                .show();
+    }
+
+    private void promptForDeviceName(boolean isRename) {
+        EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setHint("Device name");
+        String current = prefs.getString("deviceName", "");
+        if (isRename && current != null) input.setText(current);
+
+        LinearLayout container = new LinearLayout(this);
+        container.setPadding(32, 24, 32, 0);
+        container.addView(input);
+
+        String title = isRename ? "Edit device name" : "Register device";
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setView(container)
+                .setPositiveButton(isRename ? "Save" : "Register", (d, w) -> {
+                    String name = input.getText().toString().trim();
+                    if (name.isEmpty()) {
+                        Toast.makeText(this, "Please enter a device name", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    if (isRename) {
+                        renameDevice(name);
+                    } else {
+                        requestPermissionsAndRegister(name);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void renameDevice(String newName) {
+        String fingerprint = prefs.getString("deviceFingerprint", Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID));
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString("deviceName", newName);
+        editor.putBoolean("isRegistered", true);
+        editor.apply();
+
+        startTrackingService(newName, fingerprint);
+        updateUI();
+        Toast.makeText(this, "Device name updated", Toast.LENGTH_SHORT).show();
+    }
+
+    private void showProfileMenu() {
+        new AlertDialog.Builder(this)
+                .setTitle(userName != null ? userName : "Profile")
+                .setMessage(userEmail != null ? userEmail : "")
+                .setPositiveButton("Logout", (dialog, which) -> logout())
+                .setNegativeButton("Close", null)
                 .show();
     }
     
