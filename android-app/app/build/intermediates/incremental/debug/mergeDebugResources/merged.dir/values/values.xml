@@ -2161,6 +2161,23 @@
     <item name="android:windowEnterAnimation">@anim/mtrl_bottom_sheet_slide_in</item>
     <item name="android:windowExitAnimation">@anim/mtrl_bottom_sheet_slide_out</item>
   </style>
+    <style name="AppTheme" parent="Theme.MaterialComponents.Light.DarkActionBar">
+        
+        <item name="colorPrimary">#4285F4</item>
+        <item name="colorPrimaryVariant">#3367D6</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        
+        
+        <item name="colorSecondary">#34A853</item>
+        <item name="colorSecondaryVariant">#2D8E47</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        
+        
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+        
+        
+        <item name="colorAccent">#4285F4</item>
+    </style>
     <style name="Base.AlertDialog.AppCompat" parent="android:Widget">
         <item name="android:layout">@layout/abc_alert_dialog_material</item>
         <item name="listLayout">@layout/abc_select_dialog_material</item>

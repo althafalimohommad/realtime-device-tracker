@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:2:1-48:12
-INJECTED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:2:1-48:12
-INJECTED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:2:1-48:12
-INJECTED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:2:1-48:12
+ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:2:1-54:12
+INJECTED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:2:1-54:12
+INJECTED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:2:1-54:12
+INJECTED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:2:1-54:12
 MERGED from [com.google.android.material:material:1.11.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\6fe221ef3627acc9045c8968b4817037\transformed\material-1.11.0\AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\f570898b3a8103785762393a2a8adf27\transformed\constraintlayout-2.1.4\AndroidManifest.xml:2:1-11:12
 MERGED from [androidx.appcompat:appcompat-resources:1.6.1] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\2213277e0f5a09e2874d3c9a9dbb8d87\transformed\jetified-appcompat-resources-1.6.1\AndroidManifest.xml:17:1-22:12
@@ -106,8 +106,8 @@ MERGED from [androidx.work:work-runtime:2.9.0] C:\Users\Mohmad Althaf Ali\.gradl
 	android:name
 		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:13:22-65
 application
-ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:15:5-46:19
-INJECTED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:15:5-46:19
+ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:15:5-52:19
+INJECTED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:15:5-52:19
 MERGED from [com.google.android.material:material:1.11.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\6fe221ef3627acc9045c8968b4817037\transformed\material-1.11.0\AndroidManifest.xml:22:5-20
 MERGED from [com.google.android.material:material:1.11.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\6fe221ef3627acc9045c8968b4817037\transformed\material-1.11.0\AndroidManifest.xml:22:5-20
 MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\f570898b3a8103785762393a2a8adf27\transformed\constraintlayout-2.1.4\AndroidManifest.xml:9:5-20
@@ -157,7 +157,7 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\Mo
 	android:allowBackup
 		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:16:9-35
 	android:theme
-		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:21:9-67
+		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:21:9-40
 activity#com.devicetracker.LoginActivity
 ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:25:9-32:20
 	android:exported
@@ -174,22 +174,30 @@ category#android.intent.category.LAUNCHER
 ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:30:17-77
 	android:name
 		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:30:27-74
-activity#com.devicetracker.MainActivity
+activity#com.devicetracker.RegisterActivity
 ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:35:9-37:40
 	android:exported
 		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:37:13-37
 	android:name
-		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:36:13-41
-service#com.devicetracker.LocationTrackingService
-ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:40:9-44:56
-	android:enabled
-		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:42:13-35
+		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:36:13-45
+activity#com.devicetracker.MainActivity
+ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:40:9-42:40
 	android:exported
-		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:43:13-37
-	android:foregroundServiceType
-		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:44:13-53
+		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:42:13-37
 	android:name
-		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:41:13-52
+		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:41:13-41
+service#com.devicetracker.LocationTrackingService
+ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:45:9-50:44
+	android:enabled
+		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:47:13-35
+	android:exported
+		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:48:13-37
+	android:stopWithTask
+		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:50:13-41
+	android:foregroundServiceType
+		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:49:13-53
+	android:name
+		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:46:13-52
 uses-sdk
 INJECTED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml

@@ -173,8 +173,10 @@ public class LocationTrackingService extends Service {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
                     "Device Tracker",
-                    NotificationManager.IMPORTANCE_LOW
+                    NotificationManager.IMPORTANCE_DEFAULT
             );
+            channel.setDescription("Location tracking in background");
+            channel.setShowBadge(false);
             NotificationManager manager = getSystemService(NotificationManager.class);
             manager.createNotificationChannel(channel);
         }
@@ -195,12 +197,36 @@ public class LocationTrackingService extends Service {
                 .setSmallIcon(android.R.drawable.ic_menu_mylocation)
                 .setContentIntent(pi)
                 .setOngoing(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                .setAutoCancel(false)
+                .setShowWhen(true)
                 .build();
     }
 
     private void updateNotification(String text) {
         NotificationManager manager = getSystemService(NotificationManager.class);
         manager.notify(NOTIFICATION_ID, buildNotification(text));
+    }
+
+    // ===============================
+    // TASK REMOVAL HANDLING
+    // ===============================
+
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        super.onTaskRemoved(rootIntent);
+        Log.d(TAG, "App removed from recents. Restarting service...");
+        
+        // Restart the service when app is removed from recents
+        Intent restartServiceIntent = new Intent(getApplicationContext(), LocationTrackingService.class);
+        restartServiceIntent.setPackage(getPackageName());
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(restartServiceIntent);
+        } else {
+            startService(restartServiceIntent);
+        }
     }
 
     // ===============================
@@ -214,6 +240,16 @@ public class LocationTrackingService extends Service {
             fusedLocationClient.removeLocationUpdates(locationCallback);
         }
         Log.d(TAG, "LocationTrackingService stopped");
+        
+        // Restart service if it was killed
+        Intent restartServiceIntent = new Intent(getApplicationContext(), LocationTrackingService.class);
+        restartServiceIntent.setPackage(getPackageName());
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(restartServiceIntent);
+        } else {
+            startService(restartServiceIntent);
+        }
     }
 
     @Nullable

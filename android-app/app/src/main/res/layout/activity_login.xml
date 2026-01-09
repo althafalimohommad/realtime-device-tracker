@@ -47,13 +47,12 @@
             android:layout_marginBottom="16dp"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
-            <EditText
+            <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etEmail"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textEmailAddress"
-                android:textSize="16sp"
-                android:padding="16dp"/>
+                android:textSize="16sp"/>
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Password Input -->
@@ -64,13 +63,12 @@
             android:layout_marginBottom="24dp"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
-            <EditText
+            <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etPassword"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textPassword"
-                android:textSize="16sp"
-                android:padding="16dp"/>
+                android:textSize="16sp"/>
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Login Button -->

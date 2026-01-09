@@ -18,7 +18,7 @@
         android:label="@string/app_name"
         android:roundIcon="@android:drawable/ic_menu_mylocation"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.Light.DarkActionBar"
+        android:theme="@style/AppTheme"
         tools:targetApi="31">
         
         <!-- Login Activity -->
@@ -46,7 +46,8 @@
             android:name=".LocationTrackingService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="location" />
+            android:foregroundServiceType="location"
+            android:stopWithTask="false" />
             
     </application>
 

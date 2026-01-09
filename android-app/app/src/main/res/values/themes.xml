@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Device Tracker</string>
+    <!-- Material Components Theme -->
     <style name="AppTheme" parent="Theme.MaterialComponents.Light.DarkActionBar">
-        
+        <!-- Primary brand color -->
         <item name="colorPrimary">#4285F4</item>
         <item name="colorPrimaryVariant">#3367D6</item>
         <item name="colorOnPrimary">#FFFFFF</item>
         
-        
+        <!-- Secondary brand color -->
         <item name="colorSecondary">#34A853</item>
         <item name="colorSecondaryVariant">#2D8E47</item>
         <item name="colorOnSecondary">#FFFFFF</item>
         
-        
+        <!-- Status bar color -->
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
         
-        
+        <!-- Customize your theme here -->
         <item name="colorAccent">#4285F4</item>
     </style>
 </resources>

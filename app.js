@@ -732,34 +732,59 @@ app.post('/api/verify-google-user', async function(req, res) {
             return res.status(400).json({ success: false, message: 'Email and googleId required (or valid idToken)' });
         }
         
-        console.log(`🔐 Android app login attempt: ${email}`);
+        console.log(`🔐 Android app Google login attempt: ${email}`);
         
-        // Check if user exists in database with this Google ID
+        const normalizedEmail = email.toLowerCase();
+        
+        // 🔗 ACCOUNT LINKING: Check if user exists with this email (regardless of auth method)
         let user = null;
-        for (const userId in usersDB) {
-            if (usersDB[userId].id === googleId) {
-                user = usersDB[userId];
-                break;
-            }
+        if (useMongoDb) {
+            user = await database.getUserByEmail(normalizedEmail);
+        } else {
+            user = Object.values(usersDB).find(u => u.email === normalizedEmail);
         }
         
-        if (!user) {
-            // Auto-create user on first Android app login
-            console.log(`🆕 Creating new user from Android app: ${email}`);
-            user = {
-                id: googleId,
-                email: email,
-                name: name || email.split('@')[0],
-                devices: [],
-                registeredDevices: []
-            };
-            await saveUser(user);
+        if (user) {
+            // User exists with this email - link Google ID to existing account
+            console.log(`🔗 Linking Google account to existing user: ${email}`);
+            
+            // Add Google ID to user if not already present
+            if (!user.googleId) {
+                user.googleId = googleId;
+                user.authType = user.authType ? 'both' : 'google';
+                await saveUser(user);
+                console.log(`✅ Google ID linked to existing account: ${user.id}`);
+            }
+        } else {
+            // Check if user exists with this Google ID
+            for (const userId in usersDB) {
+                if (usersDB[userId].id === googleId || usersDB[userId].googleId === googleId) {
+                    user = usersDB[userId];
+                    break;
+                }
+            }
+            
+            if (!user) {
+                // Create new user with Google authentication
+                console.log(`🆕 Creating new user from Google login: ${email}`);
+                user = {
+                    id: crypto.randomBytes(16).toString('hex'), // Use consistent ID format
+                    googleId: googleId,
+                    email: normalizedEmail,
+                    name: name || email.split('@')[0],
+                    authType: 'google',
+                    devices: [],
+                    registeredDevices: [],
+                    createdAt: new Date().toISOString()
+                };
+                await saveUser(user);
+            }
         }
         
         // Generate long-lived JWT for mobile app
         const appToken = generateAppToken(user.id, user.email);
         
-        console.log(`✅ User verified and JWT issued: ${email}`);
+        console.log(`✅ Google user verified and JWT issued: ${email} (userId: ${user.id})`);
         res.json({ 
             success: true, 
             userId: user.id,
@@ -788,7 +813,7 @@ app.post('/api/app/login', async function(req, res) {
             });
         }
         
-        console.log(`📱 Mobile app login attempt: ${email}`);
+        console.log(`📱 Mobile app email/password login attempt: ${email}`);
         
         const normalizedEmail = email.toLowerCase();
         
@@ -807,11 +832,11 @@ app.post('/api/app/login', async function(req, res) {
             });
         }
         
-        // Check if user registered with Google OAuth
+        // Check if user registered with Google OAuth only
         if (!user.password) {
             return res.status(400).json({ 
                 success: false, 
-                message: 'This account uses Google Sign-In. Please use Google authentication in the app.' 
+                message: 'This account uses Google Sign-In. Please use Google authentication or set a password first.' 
             });
         }
         
@@ -831,7 +856,7 @@ app.post('/api/app/login', async function(req, res) {
         // Generate long-lived JWT for mobile app
         const appToken = generateAppToken(user.id, user.email);
         
-        console.log(`✅ Mobile app login successful: ${email}`);
+        console.log(`✅ Mobile app email/password login successful: ${email} (userId: ${user.id})`);
         res.json({ 
             success: true, 
             userId: user.id,
@@ -884,7 +909,7 @@ app.post('/api/app/register', async function(req, res) {
         
         const normalizedEmail = email.toLowerCase();
         
-        // Check if user exists
+        // 🔗 ACCOUNT LINKING: Check if user exists with this email
         let existingUser = null;
         if (useMongoDb) {
             existingUser = await database.getUserByEmail(normalizedEmail);
@@ -893,10 +918,35 @@ app.post('/api/app/register', async function(req, res) {
         }
         
         if (existingUser) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Email already registered' 
-            });
+            // User exists - check if they registered with Google
+            if (existingUser.googleId && !existingUser.password) {
+                // User registered with Google, now adding password
+                console.log(`🔗 Adding password to existing Google account: ${email}`);
+                
+                const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+                existingUser.password = hashedPassword;
+                existingUser.authType = 'both';
+                await saveUser(existingUser);
+                
+                const appToken = generateAppToken(existingUser.id, existingUser.email);
+                
+                console.log(`✅ Password added to Google account: ${email}`);
+                return res.json({ 
+                    success: true,
+                    message: 'Password added to your Google account',
+                    userId: existingUser.id,
+                    name: existingUser.name,
+                    email: existingUser.email,
+                    token: appToken,
+                    tokenExpiry: Date.now() + (7 * 24 * 60 * 60 * 1000)
+                });
+            } else {
+                // User already has email/password account
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'Email already registered. Please login instead.' 
+                });
+            }
         }
         
         // Hash password
@@ -922,7 +972,7 @@ app.post('/api/app/register', async function(req, res) {
         // Generate JWT for mobile app
         const appToken = generateAppToken(newUser.id, newUser.email);
         
-        console.log(`✅ Mobile app registration successful: ${email}`);
+        console.log(`✅ Mobile app registration successful: ${email} (userId: ${newUser.id})`);
         res.json({ 
             success: true,
             message: 'Registration successful',

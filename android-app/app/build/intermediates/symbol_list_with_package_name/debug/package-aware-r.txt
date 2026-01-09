@@ -3207,8 +3207,10 @@ id bounce
 id bounceBoth
 id bounceEnd
 id bounceStart
+id btnGoogleSignIn
+id btnLogin
 id btnLogout
-id btnSignIn
+id btnRegister
 id buttonPanel
 id cache_measures
 id callMeasure
@@ -3291,6 +3293,10 @@ id end
 id endToStart
 id enterAlways
 id enterAlwaysCollapsed
+id etConfirmPassword
+id etEmail
+id etName
+id etPassword
 id exitUntilCollapsed
 id expand_activities_button
 id expanded_menu
@@ -3590,6 +3596,8 @@ id transition_scene_layoutid_cache
 id transition_transform
 id triangle
 id tvEmail
+id tvLogin
+id tvRegister
 id tvStatus
 id tvUserInfo
 id tvWelcome
@@ -3735,6 +3743,7 @@ layout abc_select_dialog_material
 layout abc_tooltip
 layout activity_login
 layout activity_main
+layout activity_register
 layout custom_dialog
 layout design_bottom_navigation_item
 layout design_bottom_sheet_dialog
@@ -4002,6 +4011,7 @@ style Animation_Material3_SideSheetDialog
 style Animation_Material3_SideSheetDialog_Left
 style Animation_Material3_SideSheetDialog_Right
 style Animation_MaterialComponents_BottomSheetDialog
+style AppTheme
 style Base_AlertDialog_AppCompat
 style Base_AlertDialog_AppCompat_Light
 style Base_Animation_AppCompat_Dialog

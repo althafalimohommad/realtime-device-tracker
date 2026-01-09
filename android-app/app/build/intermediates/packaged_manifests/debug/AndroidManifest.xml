@@ -35,7 +35,7 @@
         android:label="@string/app_name"
         android:roundIcon="@android:drawable/ic_menu_mylocation"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.Light.DarkActionBar" >
+        android:theme="@style/AppTheme" >
 
         <!-- Login Activity -->
         <activity
@@ -48,6 +48,11 @@
             </intent-filter>
         </activity>
 
+        <!-- Register Activity -->
+        <activity
+            android:name="com.devicetracker.RegisterActivity"
+            android:exported="false" />
+
         <!-- Main Activity -->
         <activity
             android:name="com.devicetracker.MainActivity"
@@ -58,7 +63,8 @@
             android:name="com.devicetracker.LocationTrackingService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="location" />
+            android:foregroundServiceType="location"
+            android:stopWithTask="false" />
 
         <provider
             android:name="androidx.startup.InitializationProvider"

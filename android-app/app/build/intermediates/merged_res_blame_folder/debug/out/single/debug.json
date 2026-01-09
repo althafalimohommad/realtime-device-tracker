@@ -1,5 +1,9 @@
 [
     {
+        "merged": "com.devicetracker.app-merged_res-40:/layout_activity_register.xml.flat",
+        "source": "com.devicetracker.app-main-42:/layout/activity_register.xml"
+    },
+    {
         "merged": "com.devicetracker.app-merged_res-40:/layout_activity_login.xml.flat",
         "source": "com.devicetracker.app-main-42:/layout/activity_login.xml"
     },
