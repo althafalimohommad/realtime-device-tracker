@@ -14,8 +14,8 @@
 
         <!-- Logo/Header -->
         <ImageView
-            android:layout_width="120dp"
-            android:layout_height="120dp"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
             android:src="@android:drawable/ic_menu_mylocation"
             android:tint="#4285F4"
             android:layout_marginTop="32dp"
@@ -24,7 +24,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Welcome Back"
+            android:text="Create Account"
             android:textSize="28sp"
             android:textStyle="bold"
             android:textColor="#333333"
@@ -33,11 +33,28 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Track your devices in real-time"
+            android:text="Register to start tracking your devices"
             android:textSize="14sp"
             android:textColor="#666666"
             android:gravity="center"
             android:layout_marginBottom="32dp"/>
+
+        <!-- Name Input -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Full Name"
+            android:layout_marginBottom="16dp"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <EditText
+                android:id="@+id/etName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPersonName"
+                android:textSize="16sp"
+                android:padding="16dp"/>
+        </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Email Input -->
         <com.google.android.material.textfield.TextInputLayout
@@ -60,8 +77,8 @@
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Password"
-            android:layout_marginBottom="24dp"
+            android:hint="Password (min 6 characters)"
+            android:layout_marginBottom="16dp"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
             <EditText
@@ -73,42 +90,33 @@
                 android:padding="16dp"/>
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Login Button -->
+        <!-- Confirm Password Input -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Confirm Password"
+            android:layout_marginBottom="24dp"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <EditText
+                android:id="@+id/etConfirmPassword"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPassword"
+                android:textSize="16sp"
+                android:padding="16dp"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Register Button -->
         <Button
-            android:id="@+id/btnLogin"
+            android:id="@+id/btnRegister"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:text="Sign In"
+            android:text="Create Account"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
             android:textStyle="bold"
             android:background="@android:color/holo_blue_dark"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- Divider -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="OR"
-            android:textSize="14sp"
-            android:textColor="#999999"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- Google Sign In Button -->
-        <Button
-            android:id="@+id/btnGoogleSignIn"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="Continue with Google"
-            android:textColor="#333333"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:background="@android:color/white"
-            android:drawableLeft="@android:drawable/ic_menu_search"
-            android:drawablePadding="12dp"
-            android:paddingLeft="24dp"
-            android:paddingRight="24dp"
             android:layout_marginBottom="16dp"/>
 
         <!-- Progress Bar -->
@@ -131,7 +139,7 @@
             android:visibility="gone"
             android:layout_marginBottom="16dp"/>
 
-        <!-- Register Link -->
+        <!-- Login Link -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -141,15 +149,15 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Don't have an account? "
+                android:text="Already have an account? "
                 android:textSize="14sp"
                 android:textColor="#666666"/>
 
             <TextView
-                android:id="@+id/tvRegister"
+                android:id="@+id/tvLogin"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Sign Up"
+                android:text="Sign In"
                 android:textSize="14sp"
                 android:textColor="#4285F4"
                 android:textStyle="bold"

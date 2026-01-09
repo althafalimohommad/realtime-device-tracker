@@ -11,11 +11,13 @@ const { OAuth2Client } = require('google-auth-library');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const crypto = require('crypto');
+const bcrypt = require('bcrypt');
 const database = require('./database');
 
 // JWT Configuration
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || crypto.randomBytes(64).toString('hex');
 const JWT_EXPIRY = '7d'; // 7 days validity for mobile app tokens
+const SALT_ROUNDS = 10; // bcrypt salt rounds for password hashing
 
 // Generate JWT token for mobile app authentication
 function generateAppToken(userId, email) {
@@ -508,6 +510,88 @@ app.get('/logout', function(req, res) {
     });
 });
 
+// Email/Password Login Route (Web only - no registration on web)
+app.post('/login', async function(req, res) {
+    try {
+        const { email, password } = req.body;
+        
+        // Validate input
+        if (!email || !password) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Email and password are required' 
+            });
+        }
+        
+        const normalizedEmail = email.toLowerCase();
+        
+        // Find user by email
+        let user = null;
+        if (useMongoDb) {
+            user = await database.getUserByEmail(normalizedEmail);
+        } else {
+            user = Object.values(usersDB).find(u => u.email === normalizedEmail);
+        }
+        
+        if (!user) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Invalid email or password' 
+            });
+        }
+        
+        // Check if user registered with Google OAuth
+        if (!user.password) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'This account uses Google Sign-In. Please use the Google button to login.' 
+            });
+        }
+        
+        // Verify password
+        const passwordMatch = await bcrypt.compare(password, user.password);
+        
+        if (!passwordMatch) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Invalid email or password' 
+            });
+        }
+        
+        // Update cache
+        usersDB[user.id] = user;
+        
+        // Log the user in
+        req.login(user, function(err) {
+            if (err) {
+                console.error('Error logging in:', err);
+                return res.status(500).json({ 
+                    success: false, 
+                    message: 'Login failed. Please try again.' 
+                });
+            }
+            
+            console.log(`✅ User logged in: ${email}`);
+            res.json({ 
+                success: true, 
+                message: 'Login successful',
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name
+                }
+            });
+        });
+        
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Login failed. Please try again.' 
+        });
+    }
+});
+
 app.get('/api/user', isAuthenticated, function(req, res) {
     res.json(req.user);
 });
@@ -688,6 +772,173 @@ app.post('/api/verify-google-user', async function(req, res) {
     } catch (error) {
         console.error('Error verifying Google user:', error);
         res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// API endpoint for mobile app to login with email/password
+app.post('/api/app/login', async function(req, res) {
+    try {
+        const { email, password } = req.body;
+        
+        // Validate input
+        if (!email || !password) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Email and password are required' 
+            });
+        }
+        
+        console.log(`📱 Mobile app login attempt: ${email}`);
+        
+        const normalizedEmail = email.toLowerCase();
+        
+        // Find user by email
+        let user = null;
+        if (useMongoDb) {
+            user = await database.getUserByEmail(normalizedEmail);
+        } else {
+            user = Object.values(usersDB).find(u => u.email === normalizedEmail);
+        }
+        
+        if (!user) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Invalid email or password' 
+            });
+        }
+        
+        // Check if user registered with Google OAuth
+        if (!user.password) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'This account uses Google Sign-In. Please use Google authentication in the app.' 
+            });
+        }
+        
+        // Verify password
+        const passwordMatch = await bcrypt.compare(password, user.password);
+        
+        if (!passwordMatch) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Invalid email or password' 
+            });
+        }
+        
+        // Update cache
+        usersDB[user.id] = user;
+        
+        // Generate long-lived JWT for mobile app
+        const appToken = generateAppToken(user.id, user.email);
+        
+        console.log(`✅ Mobile app login successful: ${email}`);
+        res.json({ 
+            success: true, 
+            userId: user.id,
+            name: user.name,
+            email: user.email,
+            token: appToken,
+            tokenExpiry: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 days from now
+        });
+        
+    } catch (error) {
+        console.error('Mobile app login error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Login failed. Please try again.' 
+        });
+    }
+});
+
+// API endpoint for mobile app to register with email/password
+app.post('/api/app/register', async function(req, res) {
+    try {
+        const { email, password, name } = req.body;
+        
+        // Validate input
+        if (!email || !password || !name) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Email, password, and name are required' 
+            });
+        }
+        
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Invalid email format' 
+            });
+        }
+        
+        // Validate password strength
+        if (password.length < 6) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Password must be at least 6 characters' 
+            });
+        }
+        
+        console.log(`📱 Mobile app registration attempt: ${email}`);
+        
+        const normalizedEmail = email.toLowerCase();
+        
+        // Check if user exists
+        let existingUser = null;
+        if (useMongoDb) {
+            existingUser = await database.getUserByEmail(normalizedEmail);
+        } else {
+            existingUser = Object.values(usersDB).find(u => u.email === normalizedEmail);
+        }
+        
+        if (existingUser) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Email already registered' 
+            });
+        }
+        
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+        
+        // Create new user
+        const userId = crypto.randomBytes(16).toString('hex');
+        const newUser = {
+            id: userId,
+            email: normalizedEmail,
+            name: name,
+            password: hashedPassword,
+            authType: 'email',
+            photo: null,
+            devices: [],
+            registeredDevices: [],
+            createdAt: new Date().toISOString()
+        };
+        
+        // Save user
+        await saveUser(newUser);
+        
+        // Generate JWT for mobile app
+        const appToken = generateAppToken(newUser.id, newUser.email);
+        
+        console.log(`✅ Mobile app registration successful: ${email}`);
+        res.json({ 
+            success: true,
+            message: 'Registration successful',
+            userId: newUser.id,
+            name: newUser.name,
+            email: newUser.email,
+            token: appToken,
+            tokenExpiry: Date.now() + (7 * 24 * 60 * 60 * 1000)
+        });
+        
+    } catch (error) {
+        console.error('Mobile app registration error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Registration failed. Please try again.' 
+        });
     }
 });
 

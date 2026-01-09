@@ -24,6 +24,9 @@ class Database {
             // Create index on user id for faster lookups
             await this.usersCollection.createIndex({ id: 1 }, { unique: true });
             
+            // Create index on email for email/password authentication
+            await this.usersCollection.createIndex({ email: 1 }, { unique: true, sparse: true });
+            
             console.log('✅ Connected to MongoDB Atlas');
             return true;
         } catch (error) {
@@ -39,6 +42,16 @@ class Database {
             return await this.usersCollection.findOne({ id: userId });
         } catch (error) {
             console.error('Error fetching user:', error);
+            return null;
+        }
+    }
+
+    async getUserByEmail(email) {
+        if (!this.usersCollection) return null;
+        try {
+            return await this.usersCollection.findOne({ email: email.toLowerCase() });
+        } catch (error) {
+            console.error('Error fetching user by email:', error);
             return null;
         }
     }
