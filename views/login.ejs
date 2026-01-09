@@ -308,7 +308,7 @@
                     successMessage.textContent = 'Login successful! Redirecting...';
                     successMessage.style.display = 'block';
                     setTimeout(() => {
-                        window.location.href = '/';
+                        window.location.href = '/tracker';
                     }, 1000);
                 } else {
                     errorMessage.textContent = data.message || 'Login failed';
