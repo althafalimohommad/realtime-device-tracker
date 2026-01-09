@@ -110,14 +110,14 @@ fetch('/api/user')
             currentUser.registeredDevices = [];
         }
         
-        // Check if user has registered devices
-        if (currentUser.registeredDevices.length === 0) {
-            // Redirect to register device if no devices registered
-            if (window.location.pathname === '/tracker') {
-                alert('Please register this device first to use Find Device feature.');
-                window.location.href = '/register-device';
-                return;
-            }
+        // Update user menu with email
+        const userMenuEmail = document.querySelector('.user-menu-email');
+        const userMenuName = document.querySelector('.user-menu-name');
+        if (userMenuEmail) {
+            userMenuEmail.textContent = user.email;
+        }
+        if (userMenuName) {
+            userMenuName.textContent = user.name || user.email.split('@')[0];
         }
         
         // Initialize encryption key for this user
@@ -132,6 +132,32 @@ fetch('/api/user')
         console.error('Not authenticated:', err);
         window.location.href = '/login';
     });
+
+// User menu toggle functionality
+document.addEventListener('DOMContentLoaded', () => {
+    const userAvatar = document.getElementById('userAvatar');
+    const userMenu = document.getElementById('userMenu');
+    
+    if (userAvatar && userMenu) {
+        // Toggle menu on avatar click
+        userAvatar.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userMenu.classList.toggle('show');
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!userMenu.contains(e.target) && e.target !== userAvatar) {
+                userMenu.classList.remove('show');
+            }
+        });
+        
+        // Close menu when clicking inside (e.g., logout link)
+        userMenu.addEventListener('click', () => {
+            userMenu.classList.remove('show');
+        });
+    }
+});
 
 // Initialize as viewer - website only displays registered devices, doesn't track browser
 async function initializeViewer() {
@@ -684,12 +710,12 @@ function updateDeviceList() {
     
     if (userDevices.length === 0) {
         list.innerHTML = `
-            <div style="padding: 20px; text-align: center; color: #5f6368;">
+            <div class="no-devices-message">
                 <i class="material-icons" style="font-size: 48px; color: #dadce0; margin-bottom: 12px;">devices</i>
-                <p style="margin-bottom: 16px;">No registered devices online</p>
-                <a href="/register-device" style="display: inline-block; padding: 10px 20px; background: #1a73e8; color: white; text-decoration: none; border-radius: 8px; font-size: 14px;">
-                    Register Another Device
-                </a>
+                <p style="margin-bottom: 8px; font-weight: 500;">No devices registered</p>
+                <p style="color: #5f6368; font-size: 14px; margin-bottom: 16px;">
+                    Register your device using the mobile app to track its location.
+                </p>
             </div>
         `;
         return;

@@ -26,7 +26,23 @@
            <button class="icon-btn" title="Help">
                <i class="material-icons">help</i>
            </button>
-           <img src="<%= user.photo %>" alt="<%= user.name %>" class="user-avatar">
+           <div class="user-menu-container">
+               <img src="<%= user.photo %>" alt="<%= user.name %>" class="user-avatar" id="userAvatar" style="cursor: pointer;">
+               <div class="user-menu" id="userMenu">
+                   <div class="user-menu-header">
+                       <img src="<%= user.photo %>" alt="<%= user.name %>" class="user-menu-avatar">
+                       <div class="user-menu-info">
+                           <div class="user-menu-name"><%= user.name %></div>
+                           <div class="user-menu-email"><%= user.email %></div>
+                       </div>
+                   </div>
+                   <div class="user-menu-divider"></div>
+                   <a href="/logout" class="user-menu-item">
+                       <i class="material-icons">logout</i>
+                       <span>Logout</span>
+                   </a>
+               </div>
+           </div>
        </div>
    </div>
 

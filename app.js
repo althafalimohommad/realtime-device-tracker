@@ -249,7 +249,12 @@ app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 hours
+    cookie: { 
+        maxAge: null, // Session cookie - expires when browser closes
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+        sameSite: 'lax'
+    }
 }));
 app.use(passport.initialize());
 app.use(passport.session());
@@ -471,16 +476,8 @@ app.get("/", function (req, res) {
     res.render("home", { user: req.user });
 });
 
-app.get("/register-device", isAuthenticated, function (req, res) {
-    res.render("register-device", { user: req.user });
-});
-
 app.get("/find-device", isAuthenticated, function (req, res) {
-    // Check if user has registered devices
-    const user = req.user;
-    if (!user.registeredDevices || user.registeredDevices.length === 0) {
-        return res.redirect('/register-device');
-    }
+    // Redirect to tracker - will show message if no devices registered
     res.redirect('/tracker');
 });
 
@@ -1094,6 +1091,11 @@ app.post('/api/location-update-app', authenticateMobileApp, async function(req, 
     }
 });
 
+// Device registration removed from web - use mobile app only
+// app.post('/api/register-device', ...) - REMOVED
+
+// Keeping this commented for reference:
+/*
 app.post('/api/register-device', isAuthenticated, async function(req, res) {
     try {
         const userId = req.user.id;
@@ -1163,6 +1165,7 @@ app.post('/api/register-device', isAuthenticated, async function(req, res) {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+*/
 
 // Unregister device endpoint
 app.post('/api/unregister-device', isAuthenticated, async function(req, res) {
