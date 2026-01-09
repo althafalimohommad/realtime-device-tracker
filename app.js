@@ -568,15 +568,26 @@ app.post('/login', async function(req, res) {
                 });
             }
             
-            console.log(`✅ User logged in: ${email}`);
-            res.json({ 
-                success: true, 
-                message: 'Login successful',
-                user: {
-                    id: user.id,
-                    email: user.email,
-                    name: user.name
+            // Ensure session is saved before sending response
+            req.session.save(function(saveErr) {
+                if (saveErr) {
+                    console.error('Error saving session:', saveErr);
+                    return res.status(500).json({ 
+                        success: false, 
+                        message: 'Login failed. Please try again.' 
+                    });
                 }
+                
+                console.log(`✅ User logged in: ${email}`);
+                res.json({ 
+                    success: true, 
+                    message: 'Login successful',
+                    user: {
+                        id: user.id,
+                        email: user.email,
+                        name: user.name
+                    }
+                });
             });
         });
         
