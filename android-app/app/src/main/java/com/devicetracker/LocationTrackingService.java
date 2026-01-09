@@ -1,5 +1,6 @@
 package com.devicetracker;
 
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -16,6 +17,9 @@ import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkManager;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -23,6 +27,8 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
+
+import java.util.concurrent.TimeUnit;
 
 public class LocationTrackingService extends Service {
 
@@ -73,6 +79,7 @@ public class LocationTrackingService extends Service {
         );
 
         startLocationUpdates();
+        scheduleWatchdog();
         Log.d(TAG, "LocationTrackingService started successfully");
     }
 
@@ -88,6 +95,19 @@ public class LocationTrackingService extends Service {
         }
         return START_STICKY;
     }
+
+        private void scheduleWatchdog() {
+        PeriodicWorkRequest work = new PeriodicWorkRequest.Builder(
+            LocationWatchdogWorker.class,
+            15, TimeUnit.MINUTES
+        ).build();
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "location_watchdog",
+            ExistingPeriodicWorkPolicy.UPDATE,
+            work
+        );
+        }
 
     // ===============================
     // LOCATION HANDLING
@@ -216,16 +236,28 @@ public class LocationTrackingService extends Service {
     @Override
     public void onTaskRemoved(Intent rootIntent) {
         super.onTaskRemoved(rootIntent);
-        Log.d(TAG, "App removed from recents. Restarting service...");
-        
-        // Restart the service when app is removed from recents
-        Intent restartServiceIntent = new Intent(getApplicationContext(), LocationTrackingService.class);
-        restartServiceIntent.setPackage(getPackageName());
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(restartServiceIntent);
-        } else {
-            startService(restartServiceIntent);
+        Log.d(TAG, "App removed from recents. Scheduling restart");
+
+        // Schedule a one-shot restart in a few seconds to survive clear-all
+        Intent restartIntent = new Intent(getApplicationContext(), LocationTrackingService.class);
+        restartIntent.setPackage(getPackageName());
+
+        PendingIntent pi = PendingIntent.getService(
+                this,
+                101,
+                restartIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+        long triggerAt = System.currentTimeMillis() + 5_000; // 5 seconds
+
+        if (alarmManager != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi);
+            } else {
+                alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pi);
+            }
         }
     }
 
@@ -240,15 +272,27 @@ public class LocationTrackingService extends Service {
             fusedLocationClient.removeLocationUpdates(locationCallback);
         }
         Log.d(TAG, "LocationTrackingService stopped");
-        
-        // Restart service if it was killed
-        Intent restartServiceIntent = new Intent(getApplicationContext(), LocationTrackingService.class);
-        restartServiceIntent.setPackage(getPackageName());
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(restartServiceIntent);
-        } else {
-            startService(restartServiceIntent);
+
+        // Schedule restart to recover from kills
+        Intent restartIntent = new Intent(getApplicationContext(), LocationTrackingService.class);
+        restartIntent.setPackage(getPackageName());
+
+        PendingIntent pi = PendingIntent.getService(
+                this,
+                102,
+                restartIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+        long triggerAt = System.currentTimeMillis() + 5_000; // 5 seconds
+
+        if (alarmManager != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi);
+            } else {
+                alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pi);
+            }
         }
     }
 
