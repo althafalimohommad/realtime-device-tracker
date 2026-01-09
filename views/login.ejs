@@ -299,6 +299,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
+                    credentials: 'include', // Important: Include cookies in request
                     body: JSON.stringify({ email, password })
                 });
                 
@@ -307,9 +308,8 @@
                 if (data.success) {
                     successMessage.textContent = 'Login successful! Redirecting...';
                     successMessage.style.display = 'block';
-                    setTimeout(() => {
-                        window.location.href = '/tracker';
-                    }, 1000);
+                    // Redirect immediately without delay
+                    window.location.href = '/tracker';
                 } else {
                     errorMessage.textContent = data.message || 'Login failed';
                     errorMessage.style.display = 'block';
@@ -317,6 +317,7 @@
                     loginBtn.textContent = 'Sign In';
                 }
             } catch (error) {
+                console.error('Login error:', error);
                 errorMessage.textContent = 'Network error. Please try again.';
                 errorMessage.style.display = 'block';
                 loginBtn.disabled = false;
