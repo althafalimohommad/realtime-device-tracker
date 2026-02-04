@@ -19,7 +19,5 @@ services:
         value: production
       - key: MONGODB_URI
         sync: false
-      - key: EMAIL_USER
-        sync: false
-      - key: EMAIL_PASS
+      - key: RESEND_API_KEY
         sync: false

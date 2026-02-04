@@ -15,7 +15,7 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const database = require('./database');
 
 // JWT Configuration
@@ -26,31 +26,17 @@ const SALT_ROUNDS = 10; // bcrypt salt rounds for password hashing
 // ===============================
 // EMAIL CONFIGURATION (for password reset)
 // ===============================
-// Email configuration - only create transporter if credentials exist
-let emailTransporter = null;
+// Email configuration using Resend (HTTP-based, works on Render)
+let resend = null;
 let emailConfigured = false;
 
-if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-    emailTransporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
-        }
-    });
-    
-    // Verify email configuration on startup
-    emailTransporter.verify(function(error, success) {
-        if (error) {
-            console.error('❌ Email configuration error:', error.message);
-            emailConfigured = false;
-        } else {
-            console.log('✅ Email server is ready to send messages');
-            emailConfigured = true;
-        }
-    });
+if (process.env.RESEND_API_KEY) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+    emailConfigured = true;
+    console.log('✅ Resend email service configured');
 } else {
-    console.warn('⚠️ EMAIL_USER or EMAIL_PASS not set - password reset emails will not work');
+    console.warn('⚠️ RESEND_API_KEY not set - password reset emails will not work');
+    console.warn('   Get a free API key at https://resend.com');
 }
 
 // Store for password reset codes (email -> {code, expiresAt, attempts})
@@ -61,40 +47,47 @@ function generateVerificationCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// Send password reset email
+// Send password reset email using Resend
 async function sendPasswordResetEmail(email, code, userName) {
-    if (!emailTransporter || !emailConfigured) {
+    if (!resend || !emailConfigured) {
         throw new Error('Email service is not configured. Please contact support.');
     }
     
-    const mailOptions = {
-        from: `"Device Tracker" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: '🔐 Password Reset Code - Device Tracker',
-        html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-                    <h1 style="color: white; margin: 0;">📍 Device Tracker</h1>
-                </div>
-                <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-                    <h2 style="color: #333;">Hi ${userName || 'there'},</h2>
-                    <p style="color: #666; font-size: 16px;">You requested to reset your password. Use the code below to verify your identity:</p>
-                    <div style="background: #667eea; color: white; font-size: 32px; font-weight: bold; text-align: center; padding: 20px; border-radius: 10px; letter-spacing: 8px; margin: 20px 0;">
-                        ${code}
-                    </div>
-                    <p style="color: #666; font-size: 14px;">⏰ This code expires in <strong>10 minutes</strong>.</p>
-                    <p style="color: #999; font-size: 12px;">If you didn't request this, please ignore this email. Your password will remain unchanged.</p>
-                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                    <p style="color: #999; font-size: 12px; text-align: center;">© ${new Date().getFullYear()} Device Tracker App</p>
-                </div>
+    const htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+                <h1 style="color: white; margin: 0;">📍 Device Tracker</h1>
             </div>
-        `
-    };
+            <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+                <h2 style="color: #333;">Hi ${userName || 'there'},</h2>
+                <p style="color: #666; font-size: 16px;">You requested to reset your password. Use the code below to verify your identity:</p>
+                <div style="background: #667eea; color: white; font-size: 32px; font-weight: bold; text-align: center; padding: 20px; border-radius: 10px; letter-spacing: 8px; margin: 20px 0;">
+                    ${code}
+                </div>
+                <p style="color: #666; font-size: 14px;">⏰ This code expires in <strong>10 minutes</strong>.</p>
+                <p style="color: #999; font-size: 12px;">If you didn't request this, please ignore this email. Your password will remain unchanged.</p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="color: #999; font-size: 12px; text-align: center;">© ${new Date().getFullYear()} Device Tracker App</p>
+            </div>
+        </div>
+    `;
     
     console.log(`📧 Attempting to send email to: ${email}`);
-    const result = await emailTransporter.sendMail(mailOptions);
-    console.log(`✅ Email sent successfully. Message ID: ${result.messageId}`);
-    return result;
+    
+    const { data, error } = await resend.emails.send({
+        from: 'Device Tracker <onboarding@resend.dev>',
+        to: [email],
+        subject: '🔐 Password Reset Code - Device Tracker',
+        html: htmlContent
+    });
+    
+    if (error) {
+        console.error('❌ Resend error:', error);
+        throw new Error(error.message || 'Failed to send email');
+    }
+    
+    console.log(`✅ Email sent successfully. ID: ${data.id}`);
+    return data;
 }
 
 // Generate JWT token for mobile app authentication
