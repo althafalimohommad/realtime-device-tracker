@@ -2,72 +2,139 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true">
+    android:fillViewport="true"
+    android:background="#0F1115">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="20dp">
 
-        <!-- Header -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Device Tracker"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:textColor="#333333"
-            android:layout_marginBottom="8dp"/>
-
-        <!-- User Info Card -->
+        <!-- Top bar -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="#E3F2FD"
-            android:padding="16dp"
-            android:layout_marginBottom="24dp">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingBottom="16dp">
 
             <TextView
-                android:id="@+id/tvWelcome"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Welcome!"
-                android:textSize="18sp"
+                android:layout_weight="1"
+                android:text="Realtime Device Tracker"
+                android:textColor="#FFFFFF"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/btnProfile"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:background="@drawable/avatar_circle"
+                android:gravity="center"
+                android:text="U"
+                android:textColor="#111216"
                 android:textStyle="bold"
-                android:textColor="#1976D2"
-                android:layout_marginBottom="4dp"/>
-
-            <TextView
-                android:id="@+id/tvEmail"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="email@example.com"
-                android:textSize="14sp"
-                android:textColor="#555555"
-                android:layout_marginBottom="4dp"/>
-
-            <TextView
-                android:id="@+id/tvUserInfo"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="User ID: xxx"
-                android:textSize="12sp"
-                android:textColor="#777777"/>
-
+                android:textSize="16sp"
+                android:padding="8dp" />
         </LinearLayout>
 
-        <!-- Device Registration Section -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Device Registration"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="#333333"
-            android:layout_marginBottom="12dp"/>
+            android:text="by Mohmad Althaf ALi"
+            android:textColor="#9EA4B3"
+            android:textSize="12sp"
+            android:layout_marginBottom="16dp" />
 
+        <!-- Device card -->
+        <LinearLayout
+            android:id="@+id/deviceCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:background="@drawable/card_bg"
+            android:gravity="center_vertical"
+            android:clickable="true"
+            android:focusable="true">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvDeviceName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Device name"
+                    android:textColor="#FFFFFF"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvDeviceStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="This device"
+                    android:textColor="#9EA4B3"
+                    android:textSize="14sp"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="›"
+                android:textColor="#FFFFFF"
+                android:textSize="24sp" />
+        </LinearLayout>
+
+        <!-- Empty state when no device -->
+        <LinearLayout
+            android:id="@+id/emptyState"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="24dp"
+            android:background="@drawable/card_bg"
+            android:layout_marginTop="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No device registered"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="6dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Register this phone to start tracking."
+                android:textColor="#9EA4B3"
+                android:textSize="13sp"
+                android:layout_marginBottom="12dp" />
+
+            <Button
+                android:id="@+id/registerButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Register device"
+                android:textAllCaps="false"
+                android:textColor="#111216"
+                android:backgroundTint="#64D2A6"
+                android:paddingLeft="20dp"
+                android:paddingRight="20dp" />
+        </LinearLayout>
+
+        <!-- Hidden edit field for renaming -->
         <EditText
             android:id="@+id/deviceNameInput"
             android:layout_width="match_parent"
@@ -75,63 +142,26 @@
             android:hint="Device Name (e.g., My Phone)"
             android:padding="12dp"
             android:background="@android:drawable/edit_text"
-            android:layout_marginBottom="16dp"/>
+            android:layout_marginTop="16dp"
+            android:visibility="gone" />
 
-        <Button
-            android:id="@+id/registerButton"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="Register Device"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:background="@android:color/holo_blue_dark"
-            android:textColor="#FFFFFF"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/unregisterButton"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="Unregister Device"
-            android:textSize="16sp"
-            android:background="@android:color/holo_orange_dark"
-            android:textColor="#FFFFFF"
-            android:visibility="gone"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- Status Card -->
+        <!-- Status text -->
         <TextView
             android:id="@+id/statusText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="⚠️ Device Not Registered\nRegister to start tracking"
-            android:textSize="14sp"
-            android:padding="16dp"
-            android:background="#F5F5F5"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="24dp"/>
+            android:text=""
+            android:textSize="13sp"
+            android:textColor="#9EA4B3"
+            android:layout_marginTop="16dp" />
 
-        <!-- Logout Button -->
+        <!-- Logout button (in menu), keep as fallback -->
         <Button
             android:id="@+id/btnLogout"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="Logout"
-            android:textSize="14sp"
-            android:background="@android:color/darker_gray"
-            android:textColor="#FFFFFF"
-            android:layout_marginTop="16dp"/>
-
-        <!-- Info Text -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="This app tracks your device location 24/7 in the background.\nView locations on the website."
-            android:textSize="12sp"
-            android:textColor="#999999"
-            android:gravity="center"
-            android:layout_gravity="center"
-            android:layout_marginTop="24dp"/>
+            android:layout_height="0dp"
+            android:visibility="gone"
+            android:text="Logout" />
 
     </LinearLayout>
 

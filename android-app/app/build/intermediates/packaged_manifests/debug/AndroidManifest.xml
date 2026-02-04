@@ -17,8 +17,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <permission
         android:name="com.devicetracker.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
@@ -53,6 +53,11 @@
             android:name="com.devicetracker.RegisterActivity"
             android:exported="false" />
 
+        <!-- Forgot Password Activity -->
+        <activity
+            android:name="com.devicetracker.ForgotPasswordActivity"
+            android:exported="false" />
+
         <!-- Main Activity -->
         <activity
             android:name="com.devicetracker.MainActivity"
@@ -65,6 +70,17 @@
             android:exported="false"
             android:foregroundServiceType="location"
             android:stopWithTask="false" />
+
+        <!-- Restart service after reboot -->
+        <receiver
+            android:name="com.devicetracker.BootReceiver"
+            android:enabled="true"
+            android:exported="true" >
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <provider
             android:name="androidx.startup.InitializationProvider"

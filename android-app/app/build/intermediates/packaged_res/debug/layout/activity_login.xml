@@ -60,7 +60,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Password"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="8dp"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -70,6 +70,22 @@
                 android:inputType="textPassword"
                 android:textSize="16sp"/>
         </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Forgot Password Link (hidden initially, shown after wrong password) -->
+        <TextView
+            android:id="@+id/tvForgotPassword"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Forgot Password?"
+            android:textSize="14sp"
+            android:textColor="#4285F4"
+            android:textStyle="bold"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="8dp"
+            android:layout_gravity="end"
+            android:visibility="gone"
+            android:layout_marginBottom="16dp"/>
 
         <!-- Login Button -->
         <Button

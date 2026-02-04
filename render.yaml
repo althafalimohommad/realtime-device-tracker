@@ -19,3 +19,7 @@ services:
         value: production
       - key: MONGODB_URI
         sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false

@@ -26,13 +26,32 @@ const SALT_ROUNDS = 10; // bcrypt salt rounds for password hashing
 // ===============================
 // EMAIL CONFIGURATION (for password reset)
 // ===============================
-const emailTransporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
+// Email configuration - only create transporter if credentials exist
+let emailTransporter = null;
+let emailConfigured = false;
+
+if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    emailTransporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS
+        }
+    });
+    
+    // Verify email configuration on startup
+    emailTransporter.verify(function(error, success) {
+        if (error) {
+            console.error('❌ Email configuration error:', error.message);
+            emailConfigured = false;
+        } else {
+            console.log('✅ Email server is ready to send messages');
+            emailConfigured = true;
+        }
+    });
+} else {
+    console.warn('⚠️ EMAIL_USER or EMAIL_PASS not set - password reset emails will not work');
+}
 
 // Store for password reset codes (email -> {code, expiresAt, attempts})
 const passwordResetCodes = new Map();
@@ -44,6 +63,10 @@ function generateVerificationCode() {
 
 // Send password reset email
 async function sendPasswordResetEmail(email, code, userName) {
+    if (!emailTransporter || !emailConfigured) {
+        throw new Error('Email service is not configured. Please contact support.');
+    }
+    
     const mailOptions = {
         from: `"Device Tracker" <${process.env.EMAIL_USER}>`,
         to: email,
@@ -68,7 +91,10 @@ async function sendPasswordResetEmail(email, code, userName) {
         `
     };
     
-    return emailTransporter.sendMail(mailOptions);
+    console.log(`📧 Attempting to send email to: ${email}`);
+    const result = await emailTransporter.sendMail(mailOptions);
+    console.log(`✅ Email sent successfully. Message ID: ${result.messageId}`);
+    return result;
 }
 
 // Generate JWT token for mobile app authentication
@@ -1005,12 +1031,18 @@ app.post('/api/forgot-password', async function(req, res) {
                 success: false,
                 message: 'This account uses Google Sign-In. Please login with Google.'
             });
+        } else {
+            // User not found - return error
+            return res.json({
+                success: false,
+                message: 'No account found with this email. Please check your email or register.'
+            });
         }
         
-        // Generic success message (for security)
+        // Email sent successfully
         res.json({
             success: true,
-            message: 'If an account exists with this email, a verification code has been sent.'
+            message: 'Verification code sent to your email.'
         });
         
     } catch (error) {
