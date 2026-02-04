@@ -24,6 +24,7 @@
     "url": "https://github.com/althafalimohommad/realtime-device-tracker.git"
   },
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
     "bcrypt": "^6.0.0",
     "dotenv": "^17.2.3",
     "ejs": "^3.1.10",

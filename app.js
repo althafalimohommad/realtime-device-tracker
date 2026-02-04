@@ -15,7 +15,7 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
-const { Resend } = require('resend');
+const sgMail = require('@sendgrid/mail');
 const database = require('./database');
 
 // JWT Configuration
@@ -26,17 +26,16 @@ const SALT_ROUNDS = 10; // bcrypt salt rounds for password hashing
 // ===============================
 // EMAIL CONFIGURATION (for password reset)
 // ===============================
-// Email configuration using Resend (HTTP-based, works on Render)
-let resend = null;
+// Email configuration using SendGrid (HTTP-based, works on Render, sends to ANY email)
 let emailConfigured = false;
 
-if (process.env.RESEND_API_KEY) {
-    resend = new Resend(process.env.RESEND_API_KEY);
+if (process.env.SENDGRID_API_KEY) {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
     emailConfigured = true;
-    console.log('✅ Resend email service configured');
+    console.log('✅ SendGrid email service configured');
 } else {
-    console.warn('⚠️ RESEND_API_KEY not set - password reset emails will not work');
-    console.warn('   Get a free API key at https://resend.com');
+    console.warn('⚠️ SENDGRID_API_KEY not set - password reset emails will not work');
+    console.warn('   Get a free API key at https://sendgrid.com');
 }
 
 // Store for password reset codes (email -> {code, expiresAt, attempts})
@@ -47,9 +46,9 @@ function generateVerificationCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// Send password reset email using Resend
+// Send password reset email using SendGrid
 async function sendPasswordResetEmail(email, code, userName) {
-    if (!resend || !emailConfigured) {
+    if (!emailConfigured) {
         throw new Error('Email service is not configured. Please contact support.');
     }
     
@@ -74,20 +73,16 @@ async function sendPasswordResetEmail(email, code, userName) {
     
     console.log(`📧 Attempting to send email to: ${email}`);
     
-    const { data, error } = await resend.emails.send({
-        from: 'Device Tracker <onboarding@resend.dev>',
-        to: [email],
+    const msg = {
+        to: email,
+        from: process.env.SENDGRID_FROM_EMAIL || 'noreply@devicetracker.app',
         subject: '🔐 Password Reset Code - Device Tracker',
         html: htmlContent
-    });
+    };
     
-    if (error) {
-        console.error('❌ Resend error:', error);
-        throw new Error(error.message || 'Failed to send email');
-    }
-    
-    console.log(`✅ Email sent successfully. ID: ${data.id}`);
-    return data;
+    const result = await sgMail.send(msg);
+    console.log(`✅ Email sent successfully to: ${email}`);
+    return result;
 }
 
 // Generate JWT token for mobile app authentication
