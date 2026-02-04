@@ -13,15 +13,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.google.android.gms.auth.api.signin.GoogleSignIn;
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
-import com.google.android.gms.auth.api.signin.GoogleSignInClient;
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
-import com.google.android.gms.common.api.ApiException;
-import com.google.android.gms.tasks.Task;
 
 import org.json.JSONObject;
 
@@ -38,19 +30,15 @@ import okhttp3.Response;
 public class LoginActivity extends AppCompatActivity {
 
     private static final String TAG = "LoginActivity";
-    private static final int RC_SIGN_IN = 9001;
 
     private static final String PREFS_NAME = "DeviceTracker";
     private static final String SERVER_URL =
             "https://realtime-device-tracker-s9ua.onrender.com";
-    private static final String SERVER_CLIENT_ID =
-            "31793728596-s6g87ot3785i62i48s7emh2nk3cbk6dv.apps.googleusercontent.com";
 
-    private GoogleSignInClient googleSignInClient;
     private OkHttpClient httpClient;
 
     private EditText etEmail, etPassword;
-    private Button btnLogin, btnGoogleSignIn;
+    private Button btnLogin;
     private TextView tvRegister, tvStatus, tvForgotPassword;
     private ProgressBar progressBar;
     
@@ -80,7 +68,6 @@ public class LoginActivity extends AppCompatActivity {
         etEmail = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
         btnLogin = findViewById(R.id.btnLogin);
-        btnGoogleSignIn = findViewById(R.id.btnGoogleSignIn);
         tvRegister = findViewById(R.id.tvRegister);
         tvForgotPassword = findViewById(R.id.tvForgotPassword);
         progressBar = findViewById(R.id.progressBar);
@@ -88,19 +75,8 @@ public class LoginActivity extends AppCompatActivity {
 
         httpClient = new OkHttpClient();
 
-        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(
-                GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestEmail()
-                .requestIdToken(SERVER_CLIENT_ID) // WEB CLIENT ID
-                .build();
-
-        googleSignInClient = GoogleSignIn.getClient(this, gso);
-
         // Email/Password Login
         btnLogin.setOnClickListener(v -> validateAndLogin());
-        
-        // Google OAuth Login
-        btnGoogleSignIn.setOnClickListener(v -> startGoogleLogin());
         
         // Forgot Password - hidden initially, shown after wrong password
         if (tvForgotPassword != null) {
@@ -266,164 +242,11 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     // ===============================
-    // GOOGLE LOGIN
-    // ===============================
-
-    private void startGoogleLogin() {
-        setLoading(true, "Signing in with Google...");
-        Intent signInIntent = googleSignInClient.getSignInIntent();
-        startActivityForResult(signInIntent, RC_SIGN_IN);
-    }
-
-    @Override
-    protected void onActivityResult(
-            int requestCode,
-            int resultCode,
-            @Nullable Intent data
-    ) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == RC_SIGN_IN) {
-            Task<GoogleSignInAccount> task =
-                    GoogleSignIn.getSignedInAccountFromIntent(data);
-            try {
-                GoogleSignInAccount account =
-                        task.getResult(ApiException.class);
-                sendTokenToBackend(account);
-            } catch (ApiException e) {
-                Log.e(TAG, "Google sign-in failed", e);
-                setLoading(false, "");
-                showError("Google sign-in failed");
-            }
-        }
-    }
-
-    // ===============================
-    // BACKEND VERIFICATION
-    // ===============================
-
-    private void sendTokenToBackend(GoogleSignInAccount account) {
-
-        if (account == null || account.getIdToken() == null) {
-            setLoading(false, "");
-            showError("Invalid Google account");
-            return;
-        }
-
-        try {
-            JSONObject json = new JSONObject();
-            json.put("idToken", account.getIdToken());
-
-            RequestBody body = RequestBody.create(
-                    json.toString(),
-                    MediaType.get("application/json; charset=utf-8")
-            );
-
-            Request request = new Request.Builder()
-                    .url(SERVER_URL + "/api/verify-google-user")
-                    .post(body)
-                    .build();
-
-            httpClient.newCall(request).enqueue(new Callback() {
-
-                @Override
-                public void onFailure(Call call, IOException e) {
-                    runOnUiThread(() -> {
-                        setLoading(false, "");
-                        showError("Server connection failed");
-                    });
-                }
-
-                @Override
-                public void onResponse(Call call, Response response)
-                        throws IOException {
-
-                    if (!response.isSuccessful()) {
-                        runOnUiThread(() -> {
-                            setLoading(false, "");
-                            showError("Authentication failed");
-                        });
-                        return;
-                    }
-
-                    try {
-                        JSONObject res =
-                                new JSONObject(response.body().string());
-
-                        String jwt = res.getString("token");
-                        String userId = res.getString("userId");
-                        String name = res.getString("name");
-                        String email = res.optString("email", "");
-
-                        // Debug logging
-                        Log.d(TAG, "Received JWT (first 50 chars): " + 
-                                (jwt != null ? jwt.substring(0, Math.min(50, jwt.length())) : "NULL"));
-                        Log.d(TAG, "JWT has dots: " + (jwt != null && jwt.contains(".")));
-                        Log.d(TAG, "UserId: " + userId);
-
-                        // Validate JWT format before saving
-                        if (jwt == null || !jwt.contains(".") || jwt.split("\\.").length != 3) {
-                            Log.e(TAG, "Invalid JWT received from server!");
-                            runOnUiThread(() -> {
-                                setLoading(false, "");
-                                showError("Invalid token from server");
-                            });
-                            return;
-                        }
-
-                        // ✅ SAVE AUTH CORRECTLY
-                        SharedPreferences prefs =
-                                getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-
-                        // Clear old data first
-                        prefs.edit().clear().apply();
-                        
-                        // Calculate token expiry (7 days from now)
-                        long tokenExpiry = System.currentTimeMillis() + (7L * 24 * 60 * 60 * 1000);
-
-                        // Save new auth data
-                        prefs.edit()
-                                .putString("jwt", jwt)
-                                .putString("userId", userId)
-                                .putString("userName", name)
-                                .putString("userEmail", email)
-                                .putString("authType", "google")
-                                .putLong("tokenExpiry", tokenExpiry)
-                                .apply();
-
-                        // Verify save
-                        String savedJwt = prefs.getString("jwt", "NOT_SAVED");
-                        Log.d(TAG, "Saved JWT (first 50 chars): " + 
-                                savedJwt.substring(0, Math.min(50, savedJwt.length())));
-
-                        runOnUiThread(() -> {
-                            setLoading(false, "");
-                            navigateToMainActivity();
-                        });
-
-                    } catch (Exception e) {
-                        Log.e(TAG, "Parsing error", e);
-                        runOnUiThread(() -> {
-                            setLoading(false, "");
-                            showError("Invalid server response");
-                        });
-                    }
-                }
-            });
-
-        } catch (Exception e) {
-            setLoading(false, "");
-            showError("Login failed");
-        }
-    }
-
-    // ===============================
     // UI HELPERS
     // ===============================
 
     private void setLoading(boolean loading, String message) {
         btnLogin.setEnabled(!loading);
-        btnGoogleSignIn.setEnabled(!loading);
         progressBar.setVisibility(loading ? View.VISIBLE : View.GONE);
         if (loading && !message.isEmpty()) {
             tvStatus.setText(message);

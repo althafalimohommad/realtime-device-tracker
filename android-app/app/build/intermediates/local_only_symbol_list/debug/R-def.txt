@@ -2,7 +2,6 @@ R_DEF: Internal format may change without notice
 local
 drawable avatar_circle
 drawable card_bg
-id btnGoogleSignIn
 id btnLogin
 id btnLogout
 id btnProfile

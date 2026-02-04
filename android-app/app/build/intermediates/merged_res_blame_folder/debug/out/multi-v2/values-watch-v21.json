@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.devicetracker.app-mergeDebugResources-38:/values-watch-v21/values-watch-v21.xml",
+            "outputFile": "com.devicetracker.app-mergeDebugResources-37:/values-watch-v21/values-watch-v21.xml",
             "map": [
                 {
                     "source": "C:\\Users\\Mohmad Althaf Ali\\.gradle\\caches\\transforms-3\\68b2f9db80fd5fbadc0f11fe19280caa\\transformed\\appcompat-1.6.1\\res\\values-watch-v21\\values-watch-v21.xml",

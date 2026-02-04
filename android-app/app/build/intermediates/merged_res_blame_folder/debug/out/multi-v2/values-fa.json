@@ -1,25 +1,8 @@
 {
     "logs": [
         {
-            "outputFile": "com.devicetracker.app-mergeDebugResources-38:/values-fa/values-fa.xml",
+            "outputFile": "com.devicetracker.app-mergeDebugResources-37:/values-fa/values-fa.xml",
             "map": [
-                {
-                    "source": "C:\\Users\\Mohmad Althaf Ali\\.gradle\\caches\\transforms-3\\63b1e878a06089a3080018a756e60178\\transformed\\jetified-play-services-basement-18.2.0\\res\\values-fa\\values.xml",
-                    "from": {
-                        "startLines": "4",
-                        "startColumns": "0",
-                        "startOffsets": "195",
-                        "endColumns": "150",
-                        "endOffsets": "345"
-                    },
-                    "to": {
-                        "startLines": "49",
-                        "startColumns": "4",
-                        "startOffsets": "4702",
-                        "endColumns": "154",
-                        "endOffsets": "4852"
-                    }
-                },
                 {
                     "source": "C:\\Users\\Mohmad Althaf Ali\\.gradle\\caches\\transforms-3\\6fe221ef3627acc9045c8968b4817037\\transformed\\material-1.11.0\\res\\values-fa\\values-fa.xml",
                     "from": {
@@ -88,6 +71,23 @@
                         "startOffsets": "309,419,520,631,715,816,931,1011,1088,1181,1276,1368,1462,1564,1659,1756,1850,1943,2033,2115,2223,2327,2425,2531,2636,2741,2898,10582",
                         "endColumns": "109,100,110,83,100,114,79,76,92,94,91,93,101,94,96,93,92,89,81,107,103,97,105,104,104,156,100,81",
                         "endOffsets": "414,515,626,710,811,926,1006,1083,1176,1271,1363,1457,1559,1654,1751,1845,1938,2028,2110,2218,2322,2420,2526,2631,2736,2893,2994,10659"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\Mohmad Althaf Ali\\.gradle\\caches\\transforms-3\\0d13dc95a15827d09d06a81a458cdbd5\\transformed\\jetified-play-services-basement-18.1.0\\res\\values-fa\\values.xml",
+                    "from": {
+                        "startLines": "4",
+                        "startColumns": "0",
+                        "startOffsets": "195",
+                        "endColumns": "150",
+                        "endOffsets": "345"
+                    },
+                    "to": {
+                        "startLines": "49",
+                        "startColumns": "4",
+                        "startOffsets": "4702",
+                        "endColumns": "154",
+                        "endOffsets": "4852"
                     }
                 }
             ]

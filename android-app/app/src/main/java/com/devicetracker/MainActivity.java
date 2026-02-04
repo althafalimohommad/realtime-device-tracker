@@ -21,10 +21,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import com.google.android.gms.auth.api.signin.GoogleSignIn;
-import com.google.android.gms.auth.api.signin.GoogleSignInClient;
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
-
 public class MainActivity extends AppCompatActivity {
     
     private static final String TAG = "MainActivity";
@@ -40,7 +36,6 @@ public class MainActivity extends AppCompatActivity {
     private String userName;
     private String userEmail;
     private String pendingDeviceName;
-    private GoogleSignInClient mGoogleSignInClient;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,12 +56,6 @@ public class MainActivity extends AppCompatActivity {
         }
         
         setContentView(R.layout.activity_main);
-        
-        // Configure Google Sign-In for logout
-        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestEmail()
-                .build();
-        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
         
         deviceCard = findViewById(R.id.deviceCard);
         emptyState = findViewById(R.id.emptyState);
@@ -320,18 +309,15 @@ public class MainActivity extends AppCompatActivity {
                     Intent serviceIntent = new Intent(MainActivity.this, LocationTrackingService.class);
                     stopService(serviceIntent);
                     
-                    // Sign out from Google
-                    mGoogleSignInClient.signOut().addOnCompleteListener(this, task -> {
-                        // Clear all preferences
-                        SharedPreferences.Editor editor = prefs.edit();
-                        editor.clear();
-                        editor.apply();
-                        
-                        // Go back to login
-                        Intent intent = new Intent(MainActivity.this, LoginActivity.class);
-                        startActivity(intent);
-                        finish();
-                    });
+                    // Clear all preferences
+                    SharedPreferences.Editor editor = prefs.edit();
+                    editor.clear();
+                    editor.apply();
+                    
+                    // Go back to login
+                    Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+                    startActivity(intent);
+                    finish();
                 })
                 .setNegativeButton("No", null)
                 .show();

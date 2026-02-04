@@ -9,8 +9,6 @@ const http = require("http");
 const socketio = require("socket.io");
 const session = require('express-session');
 const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const { OAuth2Client } = require('google-auth-library');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -103,8 +101,8 @@ function verifyAppToken(token) {
     }
 }
 
-// Middleware to authenticate mobile app requests using JWT or Google ID token
-async function authenticateMobileApp(req, res, next) {
+// Middleware to authenticate mobile app requests using JWT
+function authenticateMobileApp(req, res, next) {
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -113,40 +111,22 @@ async function authenticateMobileApp(req, res, next) {
     
     const token = authHeader.replace('Bearer ', '');
     
-    // Check if token looks like a JWT (3 parts separated by dots)
-    const tokenParts = token.split('.');
-    if (tokenParts.length === 3) {
-        // Try to verify as our custom JWT
-        const jwtPayload = verifyAppToken(token);
-        if (jwtPayload && jwtPayload.type === 'mobile_app') {
-            req.appUser = {
-                userId: jwtPayload.userId,
-                email: jwtPayload.email
-            };
-            return next();
-        }
-        
-        // If our JWT fails, try Google ID token (also has 3 parts)
-        try {
-            const payload = await verifyGoogleIdToken(token);
-            req.appUser = {
-                userId: payload.sub,
-                email: payload.email
-            };
-            return next();
-        } catch (error) {
-            console.log('⚠️ Token verification failed:', error.message);
-            return res.status(401).json({ success: false, message: 'Invalid or expired token - please re-login' });
-        }
-    } else {
-        // Token doesn't look like JWT - likely old format or corrupted
-        console.log(`⚠️ Token verification failed: Wrong number of segments in token: ${token.substring(0, 30)}...`);
-        return res.status(401).json({ 
-            success: false, 
-            message: 'Invalid token format - please logout and login again',
-            code: 'INVALID_TOKEN_FORMAT'
-        });
+    // Verify JWT token
+    const jwtPayload = verifyAppToken(token);
+    if (jwtPayload && jwtPayload.type === 'mobile_app') {
+        req.appUser = {
+            userId: jwtPayload.userId,
+            email: jwtPayload.email
+        };
+        return next();
     }
+    
+    console.log('⚠️ Token verification failed');
+    return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid or expired token - please re-login',
+        code: 'INVALID_TOKEN'
+    });
 }
 
 const server = http.createServer(app);
@@ -161,15 +141,6 @@ const USERS_FILE = path.join(__dirname, 'users.json');
 // In-memory user cache
 let usersDB = {};
 let useMongoDb = false;
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
-async function verifyGoogleIdToken(idToken) {
-    const ticket = await googleClient.verifyIdToken({
-        idToken,
-        audience: process.env.GOOGLE_CLIENT_ID
-    });
-    return ticket.getPayload();
-}
 
 // Initialize database connection
 async function initializeDatabase() {
@@ -251,43 +222,7 @@ async function updateDeviceLocation(userId, fingerprint, locationData) {
     }
 }
 
-// Passport configuration
-passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.CALLBACK_URL
-}, async (accessToken, refreshToken, profile, done) => {
-    // Store user in database
-    const userId = profile.id;
-    
-    // Check if user exists in cache or database
-    let user = usersDB[userId];
-    
-    if (!user) {
-        // Try to load from database
-        if (useMongoDb) {
-            user = await database.getUser(userId);
-        }
-        
-        // Create new user if not found
-        if (!user) {
-            user = {
-                id: userId,
-                email: profile.emails[0].value,
-                name: profile.displayName,
-                photo: profile.photos[0].value,
-                devices: [],
-                registeredDevices: []
-            };
-        }
-        
-        // Save to database
-        await saveUser(user);
-    }
-    
-    return done(null, user);
-}));
-
+// Passport serialization (for session management)
 passport.serializeUser((user, done) => {
     done(null, user.id);
 });
@@ -555,17 +490,6 @@ app.get("/login", function (req, res) {
     res.render("login");
 });
 
-app.get('/auth/google',
-    passport.authenticate('google', { scope: ['profile', 'email'] })
-);
-
-app.get('/auth/google/callback',
-    passport.authenticate('google', { failureRedirect: '/login' }),
-    function(req, res) {
-        res.redirect('/');
-    }
-);
-
 app.get('/logout', function(req, res) {
     req.logout(function(err) {
         if (err) { return next(err); }
@@ -769,111 +693,6 @@ app.post('/api/update-location', isAuthenticated, async function(req, res) {
     }
 });
 
-// API endpoint for Android app to verify Google OAuth user and get JWT
-app.post('/api/verify-google-user', async function(req, res) {
-    try {
-        let { email, name, googleId, idToken } = req.body;
-        
-        // If only idToken is provided, extract user info from it
-        if (idToken) {
-            try {
-                const payload = await verifyGoogleIdToken(idToken);
-                // Extract user info from verified token
-                googleId = googleId || payload.sub;
-                email = email || payload.email;
-                name = name || payload.name;
-                
-                // Verify the token matches the claimed identity (if both provided)
-                if (req.body.googleId && payload.sub !== req.body.googleId) {
-                    console.log(`❌ Token mismatch for googleId`);
-                    return res.status(401).json({ success: false, message: 'Token verification failed' });
-                }
-                if (req.body.email && payload.email !== req.body.email) {
-                    console.log(`❌ Token mismatch for email`);
-                    return res.status(401).json({ success: false, message: 'Token verification failed' });
-                }
-                console.log(`✅ Google ID token verified for: ${email}`);
-            } catch (tokenError) {
-                console.log(`⚠️ Google ID token verification failed: ${tokenError.message}`);
-                // If token verification fails and no email/googleId provided, reject
-                if (!email || !googleId) {
-                    return res.status(401).json({ success: false, message: 'Invalid or expired Google token' });
-                }
-            }
-        }
-        
-        if (!email || !googleId) {
-            return res.status(400).json({ success: false, message: 'Email and googleId required (or valid idToken)' });
-        }
-        
-        console.log(`🔐 Android app Google login attempt: ${email}`);
-        
-        const normalizedEmail = email.toLowerCase();
-        
-        // 🔗 ACCOUNT LINKING: Check if user exists with this email (regardless of auth method)
-        let user = null;
-        if (useMongoDb) {
-            user = await database.getUserByEmail(normalizedEmail);
-        } else {
-            user = Object.values(usersDB).find(u => u.email === normalizedEmail);
-        }
-        
-        if (user) {
-            // User exists with this email - link Google ID to existing account
-            console.log(`🔗 Linking Google account to existing user: ${email}`);
-            
-            // Add Google ID to user if not already present
-            if (!user.googleId) {
-                user.googleId = googleId;
-                user.authType = user.authType ? 'both' : 'google';
-                await saveUser(user);
-                console.log(`✅ Google ID linked to existing account: ${user.id}`);
-            }
-        } else {
-            // Check if user exists with this Google ID
-            for (const userId in usersDB) {
-                if (usersDB[userId].id === googleId || usersDB[userId].googleId === googleId) {
-                    user = usersDB[userId];
-                    break;
-                }
-            }
-            
-            if (!user) {
-                // Create new user with Google authentication
-                console.log(`🆕 Creating new user from Google login: ${email}`);
-                user = {
-                    id: crypto.randomBytes(16).toString('hex'), // Use consistent ID format
-                    googleId: googleId,
-                    email: normalizedEmail,
-                    name: name || email.split('@')[0],
-                    authType: 'google',
-                    devices: [],
-                    registeredDevices: [],
-                    createdAt: new Date().toISOString()
-                };
-                await saveUser(user);
-            }
-        }
-        
-        // Generate long-lived JWT for mobile app
-        const appToken = generateAppToken(user.id, user.email);
-        
-        console.log(`✅ Google user verified and JWT issued: ${email} (userId: ${user.id})`);
-        res.json({ 
-            success: true, 
-            userId: user.id,
-            name: user.displayName || user.name || email.split('@')[0],
-            email: user.email,
-            token: appToken,  // Backend JWT for persistent authentication
-            tokenExpiry: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 days from now
-        });
-        
-    } catch (error) {
-        console.error('Error verifying Google user:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
 // API endpoint for mobile app to login with email/password
 app.post('/api/app/login', async function(req, res) {
     try {
@@ -906,11 +725,11 @@ app.post('/api/app/login', async function(req, res) {
             });
         }
         
-        // Check if user registered with Google OAuth only
+        // Check if user has a password set
         if (!user.password) {
             return res.status(400).json({ 
                 success: false, 
-                message: 'This account uses Google Sign-In. Please use Google authentication or set a password first.' 
+                message: 'Please use the Forgot Password feature to set a password for your account.' 
             });
         }
         

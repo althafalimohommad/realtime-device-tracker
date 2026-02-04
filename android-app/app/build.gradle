@@ -42,9 +42,6 @@ dependencies {
     // WorkManager for background tasks
     implementation 'androidx.work:work-runtime:2.9.0'
     
-    // Google Sign-In
-    implementation 'com.google.android.gms:play-services-auth:20.7.0'
-    
     // Force consistent versions to avoid conflicts
     constraints {
         implementation('androidx.room:room-runtime:2.6.1') {

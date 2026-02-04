@@ -99,32 +99,6 @@
             android:background="@android:color/holo_blue_dark"
             android:layout_marginBottom="16dp"/>
 
-        <!-- Divider -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="OR"
-            android:textSize="14sp"
-            android:textColor="#999999"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- Google Sign In Button -->
-        <Button
-            android:id="@+id/btnGoogleSignIn"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="Continue with Google"
-            android:textColor="#333333"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:background="@android:color/white"
-            android:drawableLeft="@android:drawable/ic_menu_search"
-            android:drawablePadding="12dp"
-            android:paddingLeft="24dp"
-            android:paddingRight="24dp"
-            android:layout_marginBottom="16dp"/>
-
         <!-- Progress Bar -->
         <ProgressBar
             android:id="@+id/progressBar"

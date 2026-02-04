@@ -361,92 +361,68 @@
 192            </intent-filter>
 193        </receiver>
 194
-195        <activity
-195-->[com.google.android.gms:play-services-auth:20.7.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\8798001157bb4b17e26e9a8b9283189d\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:23:9-27:75
-196            android:name="com.google.android.gms.auth.api.signin.internal.SignInHubActivity"
-196-->[com.google.android.gms:play-services-auth:20.7.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\8798001157bb4b17e26e9a8b9283189d\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:24:13-93
-197            android:excludeFromRecents="true"
-197-->[com.google.android.gms:play-services-auth:20.7.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\8798001157bb4b17e26e9a8b9283189d\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:25:13-46
-198            android:exported="false"
-198-->[com.google.android.gms:play-services-auth:20.7.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\8798001157bb4b17e26e9a8b9283189d\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:26:13-37
-199            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-199-->[com.google.android.gms:play-services-auth:20.7.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\8798001157bb4b17e26e9a8b9283189d\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:27:13-72
-200        <!--
-201            Service handling Google Sign-In user revocation. For apps that do not integrate with
-202            Google Sign-In, this service will never be started.
-203        -->
-204        <service
-204-->[com.google.android.gms:play-services-auth:20.7.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\8798001157bb4b17e26e9a8b9283189d\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:33:9-37:51
-205            android:name="com.google.android.gms.auth.api.signin.RevocationBoundService"
-205-->[com.google.android.gms:play-services-auth:20.7.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\8798001157bb4b17e26e9a8b9283189d\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:34:13-89
-206            android:exported="true"
-206-->[com.google.android.gms:play-services-auth:20.7.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\8798001157bb4b17e26e9a8b9283189d\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:35:13-36
-207            android:permission="com.google.android.gms.auth.api.signin.permission.REVOCATION_NOTIFICATION"
-207-->[com.google.android.gms:play-services-auth:20.7.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\8798001157bb4b17e26e9a8b9283189d\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:36:13-107
-208            android:visibleToInstantApps="true" />
-208-->[com.google.android.gms:play-services-auth:20.7.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\8798001157bb4b17e26e9a8b9283189d\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:37:13-48
-209        <service
-209-->[androidx.room:room-runtime:2.6.1] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\3293b5af9cd4ea389da93df4f81ecba5\transformed\room-runtime-2.6.1\AndroidManifest.xml:24:9-28:63
-210            android:name="androidx.room.MultiInstanceInvalidationService"
-210-->[androidx.room:room-runtime:2.6.1] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\3293b5af9cd4ea389da93df4f81ecba5\transformed\room-runtime-2.6.1\AndroidManifest.xml:25:13-74
-211            android:directBootAware="true"
-211-->[androidx.room:room-runtime:2.6.1] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\3293b5af9cd4ea389da93df4f81ecba5\transformed\room-runtime-2.6.1\AndroidManifest.xml:26:13-43
-212            android:exported="false" />
-212-->[androidx.room:room-runtime:2.6.1] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\3293b5af9cd4ea389da93df4f81ecba5\transformed\room-runtime-2.6.1\AndroidManifest.xml:27:13-37
-213
-214        <activity
-214-->[com.google.android.gms:play-services-base:18.1.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\23cf7c3eba41f626ffc48a939f14d340\transformed\jetified-play-services-base-18.1.0\AndroidManifest.xml:20:9-22:45
-215            android:name="com.google.android.gms.common.api.GoogleApiActivity"
-215-->[com.google.android.gms:play-services-base:18.1.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\23cf7c3eba41f626ffc48a939f14d340\transformed\jetified-play-services-base-18.1.0\AndroidManifest.xml:20:19-85
-216            android:exported="false"
-216-->[com.google.android.gms:play-services-base:18.1.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\23cf7c3eba41f626ffc48a939f14d340\transformed\jetified-play-services-base-18.1.0\AndroidManifest.xml:22:19-43
-217            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-217-->[com.google.android.gms:play-services-base:18.1.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\23cf7c3eba41f626ffc48a939f14d340\transformed\jetified-play-services-base-18.1.0\AndroidManifest.xml:21:19-78
-218
-219        <meta-data
-219-->[com.google.android.gms:play-services-basement:18.2.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\63b1e878a06089a3080018a756e60178\transformed\jetified-play-services-basement-18.2.0\AndroidManifest.xml:21:9-23:69
-220            android:name="com.google.android.gms.version"
-220-->[com.google.android.gms:play-services-basement:18.2.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\63b1e878a06089a3080018a756e60178\transformed\jetified-play-services-basement-18.2.0\AndroidManifest.xml:22:13-58
-221            android:value="@integer/google_play_services_version" />
-221-->[com.google.android.gms:play-services-basement:18.2.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\63b1e878a06089a3080018a756e60178\transformed\jetified-play-services-basement-18.2.0\AndroidManifest.xml:23:13-66
-222
-223        <receiver
-223-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:34:9-52:20
-224            android:name="androidx.profileinstaller.ProfileInstallReceiver"
-224-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:35:13-76
-225            android:directBootAware="false"
-225-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:36:13-44
-226            android:enabled="true"
-226-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:37:13-35
-227            android:exported="true"
-227-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:38:13-36
-228            android:permission="android.permission.DUMP" >
-228-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:39:13-57
-229            <intent-filter>
-229-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:40:13-42:29
-230                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
-230-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:41:17-91
-230-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:41:25-88
-231            </intent-filter>
-232            <intent-filter>
-232-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:43:13-45:29
-233                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
-233-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:44:17-85
-233-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:44:25-82
-234            </intent-filter>
-235            <intent-filter>
-235-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:46:13-48:29
-236                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
-236-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:47:17-88
-236-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:47:25-85
-237            </intent-filter>
-238            <intent-filter>
-238-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:49:13-51:29
-239                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
-239-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:50:17-95
-239-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:50:25-92
-240            </intent-filter>
-241        </receiver>
-242    </application>
-243
-244</manifest>
+195        <service
+195-->[androidx.room:room-runtime:2.6.1] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\3293b5af9cd4ea389da93df4f81ecba5\transformed\room-runtime-2.6.1\AndroidManifest.xml:24:9-28:63
+196            android:name="androidx.room.MultiInstanceInvalidationService"
+196-->[androidx.room:room-runtime:2.6.1] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\3293b5af9cd4ea389da93df4f81ecba5\transformed\room-runtime-2.6.1\AndroidManifest.xml:25:13-74
+197            android:directBootAware="true"
+197-->[androidx.room:room-runtime:2.6.1] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\3293b5af9cd4ea389da93df4f81ecba5\transformed\room-runtime-2.6.1\AndroidManifest.xml:26:13-43
+198            android:exported="false" />
+198-->[androidx.room:room-runtime:2.6.1] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\3293b5af9cd4ea389da93df4f81ecba5\transformed\room-runtime-2.6.1\AndroidManifest.xml:27:13-37
+199
+200        <activity
+200-->[com.google.android.gms:play-services-base:18.1.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\23cf7c3eba41f626ffc48a939f14d340\transformed\jetified-play-services-base-18.1.0\AndroidManifest.xml:20:9-22:45
+201            android:name="com.google.android.gms.common.api.GoogleApiActivity"
+201-->[com.google.android.gms:play-services-base:18.1.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\23cf7c3eba41f626ffc48a939f14d340\transformed\jetified-play-services-base-18.1.0\AndroidManifest.xml:20:19-85
+202            android:exported="false"
+202-->[com.google.android.gms:play-services-base:18.1.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\23cf7c3eba41f626ffc48a939f14d340\transformed\jetified-play-services-base-18.1.0\AndroidManifest.xml:22:19-43
+203            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+203-->[com.google.android.gms:play-services-base:18.1.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\23cf7c3eba41f626ffc48a939f14d340\transformed\jetified-play-services-base-18.1.0\AndroidManifest.xml:21:19-78
+204
+205        <meta-data
+205-->[com.google.android.gms:play-services-basement:18.1.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\0d13dc95a15827d09d06a81a458cdbd5\transformed\jetified-play-services-basement-18.1.0\AndroidManifest.xml:21:9-23:69
+206            android:name="com.google.android.gms.version"
+206-->[com.google.android.gms:play-services-basement:18.1.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\0d13dc95a15827d09d06a81a458cdbd5\transformed\jetified-play-services-basement-18.1.0\AndroidManifest.xml:22:13-58
+207            android:value="@integer/google_play_services_version" />
+207-->[com.google.android.gms:play-services-basement:18.1.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\0d13dc95a15827d09d06a81a458cdbd5\transformed\jetified-play-services-basement-18.1.0\AndroidManifest.xml:23:13-66
+208
+209        <receiver
+209-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:34:9-52:20
+210            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+210-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:35:13-76
+211            android:directBootAware="false"
+211-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:36:13-44
+212            android:enabled="true"
+212-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:37:13-35
+213            android:exported="true"
+213-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:38:13-36
+214            android:permission="android.permission.DUMP" >
+214-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:39:13-57
+215            <intent-filter>
+215-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:40:13-42:29
+216                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+216-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:41:17-91
+216-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:41:25-88
+217            </intent-filter>
+218            <intent-filter>
+218-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:43:13-45:29
+219                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+219-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:44:17-85
+219-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:44:25-82
+220            </intent-filter>
+221            <intent-filter>
+221-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:46:13-48:29
+222                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+222-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:47:17-88
+222-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:47:25-85
+223            </intent-filter>
+224            <intent-filter>
+224-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:49:13-51:29
+225                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+225-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:50:17-95
+225-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\Mohmad Althaf Ali\.gradle\caches\transforms-3\07eeb6960b57fb88826243e43d16a4e3\transformed\jetified-profileinstaller-1.3.0\AndroidManifest.xml:50:25-92
+226            </intent-filter>
+227        </receiver>
+228    </application>
+229
+230</manifest>

@@ -1,25 +1,8 @@
 {
     "logs": [
         {
-            "outputFile": "com.devicetracker.app-mergeDebugResources-38:/values-uz/values-uz.xml",
+            "outputFile": "com.devicetracker.app-mergeDebugResources-37:/values-uz/values-uz.xml",
             "map": [
-                {
-                    "source": "C:\\Users\\Mohmad Althaf Ali\\.gradle\\caches\\transforms-3\\63b1e878a06089a3080018a756e60178\\transformed\\jetified-play-services-basement-18.2.0\\res\\values-uz\\values.xml",
-                    "from": {
-                        "startLines": "4",
-                        "startColumns": "0",
-                        "startOffsets": "195",
-                        "endColumns": "145",
-                        "endOffsets": "340"
-                    },
-                    "to": {
-                        "startLines": "49",
-                        "startColumns": "4",
-                        "startOffsets": "4728",
-                        "endColumns": "149",
-                        "endOffsets": "4873"
-                    }
-                },
                 {
                     "source": "C:\\Users\\Mohmad Althaf Ali\\.gradle\\caches\\transforms-3\\68b2f9db80fd5fbadc0f11fe19280caa\\transformed\\appcompat-1.6.1\\res\\values-uz\\values-uz.xml",
                     "from": {
@@ -35,6 +18,23 @@
                         "startOffsets": "333,438,533,633,715,815,932,1017,1095,1186,1279,1374,1468,1562,1655,1750,1845,1936,2028,2112,2222,2328,2428,2536,2642,2744,2905,10783",
                         "endColumns": "104,94,99,81,99,116,84,77,90,92,94,93,93,92,94,94,90,91,83,109,105,99,107,105,101,160,98,83",
                         "endOffsets": "433,528,628,710,810,927,1012,1090,1181,1274,1369,1463,1557,1650,1745,1840,1931,2023,2107,2217,2323,2423,2531,2637,2739,2900,2999,10862"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\Mohmad Althaf Ali\\.gradle\\caches\\transforms-3\\0d13dc95a15827d09d06a81a458cdbd5\\transformed\\jetified-play-services-basement-18.1.0\\res\\values-uz\\values.xml",
+                    "from": {
+                        "startLines": "4",
+                        "startColumns": "0",
+                        "startOffsets": "195",
+                        "endColumns": "145",
+                        "endOffsets": "340"
+                    },
+                    "to": {
+                        "startLines": "49",
+                        "startColumns": "4",
+                        "startOffsets": "4728",
+                        "endColumns": "149",
+                        "endOffsets": "4873"
                     }
                 },
                 {
