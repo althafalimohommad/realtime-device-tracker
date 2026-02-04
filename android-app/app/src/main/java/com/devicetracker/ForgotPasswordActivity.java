@@ -189,7 +189,8 @@ public class ForgotPasswordActivity extends AppCompatActivity {
                             if (success) {
                                 Toast.makeText(ForgotPasswordActivity.this,
                                         "Verification code sent!", Toast.LENGTH_SHORT).show();
-                                tvEmailSent.setText("We've sent a 6-digit code to\n" + userEmail);
+                                tvEmailSent.setText("We've sent a 6-digit code to\n" + userEmail + 
+                                        "\n\n📧 Check your spam/junk folder if you don't see it!");
                                 showStep(2);
                             } else {
                                 showError(message);
