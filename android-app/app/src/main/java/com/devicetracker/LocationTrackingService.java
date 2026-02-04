@@ -36,6 +36,9 @@ public class LocationTrackingService extends Service {
     private static final String CHANNEL_ID = "LocationTrackingChannel";
     private static final int NOTIFICATION_ID = 1;
     private static final long UPDATE_INTERVAL = 3 * 60 * 1000; // 3 minutes
+    
+    // Broadcast action for session expiry - activities can listen for this
+    public static final String ACTION_SESSION_EXPIRED = "com.devicetracker.SESSION_EXPIRED";
 
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
@@ -46,6 +49,9 @@ public class LocationTrackingService extends Service {
     private String jwt;
     private String userId;
     private String deviceName;
+    
+    // Flag to prevent restart after session expiry
+    private boolean sessionExpired = false;
 
     // ===============================
     // SERVICE LIFECYCLE
@@ -80,6 +86,7 @@ public class LocationTrackingService extends Service {
 
         startLocationUpdates();
         scheduleWatchdog();
+        scheduleTokenRefreshCheck();
         Log.d(TAG, "LocationTrackingService started successfully");
     }
 
@@ -96,7 +103,7 @@ public class LocationTrackingService extends Service {
         return START_STICKY;
     }
 
-        private void scheduleWatchdog() {
+    private void scheduleWatchdog() {
         PeriodicWorkRequest work = new PeriodicWorkRequest.Builder(
             LocationWatchdogWorker.class,
             15, TimeUnit.MINUTES
@@ -107,7 +114,63 @@ public class LocationTrackingService extends Service {
             ExistingPeriodicWorkPolicy.UPDATE,
             work
         );
+    }
+    
+    /**
+     * Schedule periodic token refresh checks (every 6 hours)
+     */
+    private void scheduleTokenRefreshCheck() {
+        final long CHECK_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours
+        
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (sessionExpired) return;
+                
+                checkAndRefreshToken();
+                handler.postDelayed(this, CHECK_INTERVAL);
+            }
+        }, CHECK_INTERVAL);
+        
+        // Also check immediately on startup
+        handler.postDelayed(this::checkAndRefreshToken, 5000);
+    }
+    
+    /**
+     * Check if token needs refresh and refresh it proactively
+     */
+    private void checkAndRefreshToken() {
+        if (apiClient == null || sessionExpired) return;
+        
+        // Check if token is about to expire (less than 1 day remaining)
+        if (apiClient.shouldRefreshToken()) {
+            Log.d(TAG, "Token expiring soon, refreshing...");
+            updateNotification("Refreshing authentication...");
+            
+            apiClient.refreshToken(new ApiClient.TokenRefreshCallback() {
+                @Override
+                public void onRefreshed(String newToken) {
+                    Log.d(TAG, "✅ Token refreshed successfully in background");
+                    jwt = newToken;
+                    updateNotification("Tracking active ✓");
+                }
+                
+                @Override
+                public void onFailed(String error) {
+                    Log.e(TAG, "Token refresh failed: " + error);
+                    if (error.contains("expired") || error.contains("re-login")) {
+                        handleSessionExpiry();
+                    } else {
+                        // Network error - will retry on next check
+                        updateNotification("Auth refresh pending...");
+                    }
+                }
+            });
+        } else if (apiClient.isTokenExpired()) {
+            Log.w(TAG, "Token already expired");
+            handleSessionExpiry();
         }
+    }
 
     // ===============================
     // LOCATION HANDLING
@@ -227,6 +290,42 @@ public class LocationTrackingService extends Service {
     private void updateNotification(String text) {
         NotificationManager manager = getSystemService(NotificationManager.class);
         manager.notify(NOTIFICATION_ID, buildNotification(text));
+    }
+    
+    /**
+     * Handle session expiry: clear auth data, notify user, broadcast event, and stop service
+     */
+    private void handleSessionExpiry() {
+        Log.w(TAG, "Session expired - clearing auth and stopping service");
+        
+        // Set flag to prevent restart in onDestroy/onTaskRemoved
+        sessionExpired = true;
+        
+        // Stop location updates immediately to prevent further API calls
+        if (fusedLocationClient != null && locationCallback != null) {
+            fusedLocationClient.removeLocationUpdates(locationCallback);
+            locationCallback = null;
+        }
+        
+        // Clear all auth data
+        prefs.edit()
+                .remove("jwt")
+                .remove("userId")
+                .remove("userName")
+                .remove("userEmail")
+                .putBoolean("isRegistered", false)
+                .apply();
+        
+        // Update notification to inform user
+        updateNotification("Session expired. Tap to login again.");
+        
+        // Broadcast session expiry event - MainActivity will handle redirect
+        Intent broadcastIntent = new Intent(ACTION_SESSION_EXPIRED);
+        broadcastIntent.setPackage(getPackageName());
+        sendBroadcast(broadcastIntent);
+        
+        // Stop the service after a short delay to allow notification to show
+        handler.postDelayed(() -> stopSelf(), 3000);
     }
 
     // ===============================

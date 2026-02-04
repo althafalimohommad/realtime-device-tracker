@@ -23,14 +23,23 @@ public class ApiClient {
     private static final String TAG = "ApiClient";
     private static final String BASE_URL =
             "https://realtime-device-tracker-s9ua.onrender.com";
+    
+    // Refresh token when less than 1 day remains (token valid for 7 days)
+    private static final long TOKEN_REFRESH_THRESHOLD = 24 * 60 * 60 * 1000; // 1 day in ms
 
     private final OkHttpClient client;
     private final SharedPreferences prefs;
     private final String userAgent;
+    private boolean isRefreshingToken = false;
 
     public interface ApiCallback {
         void onSuccess(String response);
         void onError(String error);
+    }
+    
+    public interface TokenRefreshCallback {
+        void onRefreshed(String newToken);
+        void onFailed(String error);
     }
 
     public ApiClient(Context context) {
@@ -150,5 +159,106 @@ public class ApiClient {
             Log.e(TAG, "Error sending location", e);
             callback.onError("Unexpected error");
         }
+    }
+    
+    // ===============================
+    // TOKEN REFRESH
+    // ===============================
+    
+    /**
+     * Check if token needs refresh (less than 1 day remaining)
+     */
+    public boolean shouldRefreshToken() {
+        long tokenExpiry = prefs.getLong("tokenExpiry", 0);
+        if (tokenExpiry == 0) return false;
+        
+        long timeRemaining = tokenExpiry - System.currentTimeMillis();
+        boolean shouldRefresh = timeRemaining > 0 && timeRemaining < TOKEN_REFRESH_THRESHOLD;
+        
+        if (shouldRefresh) {
+            Log.d(TAG, "Token expires in " + (timeRemaining / 3600000) + " hours - needs refresh");
+        }
+        return shouldRefresh;
+    }
+    
+    /**
+     * Check if token is expired
+     */
+    public boolean isTokenExpired() {
+        long tokenExpiry = prefs.getLong("tokenExpiry", 0);
+        return tokenExpiry > 0 && System.currentTimeMillis() >= tokenExpiry;
+    }
+    
+    /**
+     * Refresh the JWT token before it expires
+     */
+    public void refreshToken(TokenRefreshCallback callback) {
+        if (isRefreshingToken) {
+            Log.d(TAG, "Token refresh already in progress");
+            return;
+        }
+        
+        String jwt = prefs.getString("jwt", null);
+        if (jwt == null) {
+            callback.onFailed("No token to refresh");
+            return;
+        }
+        
+        isRefreshingToken = true;
+        Log.d(TAG, "Refreshing token...");
+        
+        Request request = new Request.Builder()
+                .url(BASE_URL + "/api/refresh-token")
+                .addHeader("Authorization", "Bearer " + jwt)
+                .addHeader("User-Agent", userAgent)
+                .post(RequestBody.create("", MediaType.get("application/json")))
+                .build();
+        
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                isRefreshingToken = false;
+                Log.e(TAG, "Token refresh network error", e);
+                callback.onFailed("Network error during token refresh");
+            }
+            
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                isRefreshingToken = false;
+                String resBody = response.body() != null ? response.body().string() : "";
+                
+                if (response.isSuccessful()) {
+                    try {
+                        JSONObject json = new JSONObject(resBody);
+                        if (json.optBoolean("success", false)) {
+                            String newToken = json.getString("token");
+                            long newExpiry = json.optLong("tokenExpiry", 
+                                    System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000);
+                            
+                            // Save new token
+                            prefs.edit()
+                                    .putString("jwt", newToken)
+                                    .putLong("tokenExpiry", newExpiry)
+                                    .apply();
+                            
+                            Log.d(TAG, "✅ Token refreshed successfully, valid until: " + 
+                                    new java.util.Date(newExpiry));
+                            callback.onRefreshed(newToken);
+                        } else {
+                            callback.onFailed(json.optString("message", "Refresh failed"));
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error parsing refresh response", e);
+                        callback.onFailed("Invalid server response");
+                    }
+                } else if (response.code() == 401) {
+                    Log.w(TAG, "Token refresh failed - token already expired");
+                    callback.onFailed("Token expired - please re-login");
+                } else {
+                    Log.e(TAG, "Token refresh error: " + response.code());
+                    callback.onFailed("Server error: " + response.code());
+                }
+            }
+        });
     }
 }

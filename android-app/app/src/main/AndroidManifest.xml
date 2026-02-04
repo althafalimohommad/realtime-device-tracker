@@ -37,6 +37,11 @@
             android:name=".RegisterActivity"
             android:exported="false" />
         
+        <!-- Forgot Password Activity -->
+        <activity
+            android:name=".ForgotPasswordActivity"
+            android:exported="false" />
+        
         <!-- Main Activity -->
         <activity
             android:name=".MainActivity"

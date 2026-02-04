@@ -159,12 +159,17 @@ public class RegisterActivity extends AppCompatActivity {
 
                                 SharedPreferences prefs = 
                                         getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                                
+                                // Calculate token expiry (7 days from now)
+                                long tokenExpiry = System.currentTimeMillis() + (7L * 24 * 60 * 60 * 1000);
+                                
                                 prefs.edit()
                                         .putString("jwt", token)
                                         .putString("userId", userId)
                                         .putString("userName", userName)
                                         .putString("userEmail", userEmail)
                                         .putString("authType", "email")
+                                        .putLong("tokenExpiry", tokenExpiry)
                                         .apply();
 
                                 Log.d(TAG, "✅ Registration successful, JWT saved");

@@ -51,8 +51,11 @@ public class LoginActivity extends AppCompatActivity {
 
     private EditText etEmail, etPassword;
     private Button btnLogin, btnGoogleSignIn;
-    private TextView tvRegister, tvStatus;
+    private TextView tvRegister, tvStatus, tvForgotPassword;
     private ProgressBar progressBar;
+    
+    // Track wrong password attempts
+    private int wrongPasswordAttempts = 0;
 
     // ===============================
     // ACTIVITY LIFECYCLE
@@ -79,6 +82,7 @@ public class LoginActivity extends AppCompatActivity {
         btnLogin = findViewById(R.id.btnLogin);
         btnGoogleSignIn = findViewById(R.id.btnGoogleSignIn);
         tvRegister = findViewById(R.id.tvRegister);
+        tvForgotPassword = findViewById(R.id.tvForgotPassword);
         progressBar = findViewById(R.id.progressBar);
         tvStatus = findViewById(R.id.tvStatus);
 
@@ -97,6 +101,19 @@ public class LoginActivity extends AppCompatActivity {
         
         // Google OAuth Login
         btnGoogleSignIn.setOnClickListener(v -> startGoogleLogin());
+        
+        // Forgot Password - hidden initially, shown after wrong password
+        if (tvForgotPassword != null) {
+            tvForgotPassword.setVisibility(View.GONE);
+            tvForgotPassword.setOnClickListener(v -> {
+                String email = etEmail.getText().toString().trim();
+                Intent intent = new Intent(LoginActivity.this, ForgotPasswordActivity.class);
+                if (!email.isEmpty()) {
+                    intent.putExtra("email", email);
+                }
+                startActivity(intent);
+            });
+        }
         
         // Navigate to Register
         tvRegister.setOnClickListener(v -> {
@@ -195,6 +212,9 @@ public class LoginActivity extends AppCompatActivity {
                                 // Clear old data
                                 prefs.edit().clear().apply();
                                 
+                                // Calculate token expiry (7 days from now)
+                                long tokenExpiry = System.currentTimeMillis() + (7L * 24 * 60 * 60 * 1000);
+                                
                                 // Save new auth data
                                 prefs.edit()
                                         .putString("jwt", token)
@@ -202,6 +222,7 @@ public class LoginActivity extends AppCompatActivity {
                                         .putString("userName", userName)
                                         .putString("userEmail", userEmail)
                                         .putString("authType", "email")
+                                        .putLong("tokenExpiry", tokenExpiry)
                                         .apply();
 
                                 Log.d(TAG, "✅ Login successful, JWT saved");
@@ -216,6 +237,16 @@ public class LoginActivity extends AppCompatActivity {
                                 String message = jsonResponse.optString("message",
                                         "Login failed");
                                 setLoading(false, "");
+                                
+                                // Check if it's a wrong password error
+                                if (message.toLowerCase().contains("invalid") || 
+                                    message.toLowerCase().contains("password")) {
+                                    wrongPasswordAttempts++;
+                                    if (wrongPasswordAttempts >= 1 && tvForgotPassword != null) {
+                                        tvForgotPassword.setVisibility(View.VISIBLE);
+                                    }
+                                }
+                                
                                 showError(message);
                             }
                         } catch (Exception e) {
@@ -346,6 +377,9 @@ public class LoginActivity extends AppCompatActivity {
 
                         // Clear old data first
                         prefs.edit().clear().apply();
+                        
+                        // Calculate token expiry (7 days from now)
+                        long tokenExpiry = System.currentTimeMillis() + (7L * 24 * 60 * 60 * 1000);
 
                         // Save new auth data
                         prefs.edit()
@@ -354,6 +388,7 @@ public class LoginActivity extends AppCompatActivity {
                                 .putString("userName", name)
                                 .putString("userEmail", email)
                                 .putString("authType", "google")
+                                .putLong("tokenExpiry", tokenExpiry)
                                 .apply();
 
                         // Verify save

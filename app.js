@@ -15,12 +15,61 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
+const nodemailer = require('nodemailer');
 const database = require('./database');
 
 // JWT Configuration
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || crypto.randomBytes(64).toString('hex');
 const JWT_EXPIRY = '7d'; // 7 days validity for mobile app tokens
 const SALT_ROUNDS = 10; // bcrypt salt rounds for password hashing
+
+// ===============================
+// EMAIL CONFIGURATION (for password reset)
+// ===============================
+const emailTransporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
+
+// Store for password reset codes (email -> {code, expiresAt, attempts})
+const passwordResetCodes = new Map();
+
+// Generate 6-digit verification code
+function generateVerificationCode() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Send password reset email
+async function sendPasswordResetEmail(email, code, userName) {
+    const mailOptions = {
+        from: `"Device Tracker" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: '🔐 Password Reset Code - Device Tracker',
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+                    <h1 style="color: white; margin: 0;">📍 Device Tracker</h1>
+                </div>
+                <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+                    <h2 style="color: #333;">Hi ${userName || 'there'},</h2>
+                    <p style="color: #666; font-size: 16px;">You requested to reset your password. Use the code below to verify your identity:</p>
+                    <div style="background: #667eea; color: white; font-size: 32px; font-weight: bold; text-align: center; padding: 20px; border-radius: 10px; letter-spacing: 8px; margin: 20px 0;">
+                        ${code}
+                    </div>
+                    <p style="color: #666; font-size: 14px;">⏰ This code expires in <strong>10 minutes</strong>.</p>
+                    <p style="color: #999; font-size: 12px;">If you didn't request this, please ignore this email. Your password will remain unchanged.</p>
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p style="color: #999; font-size: 12px; text-align: center;">© ${new Date().getFullYear()} Device Tracker App</p>
+                </div>
+            </div>
+        `
+    };
+    
+    return emailTransporter.sendMail(mailOptions);
+}
 
 // Generate JWT token for mobile app authentication
 function generateAppToken(userId, email) {
@@ -882,6 +931,236 @@ app.post('/api/app/login', async function(req, res) {
         res.status(500).json({ 
             success: false, 
             message: 'Login failed. Please try again.' 
+        });
+    }
+});
+
+// ===============================
+// PASSWORD RESET ENDPOINTS
+// ===============================
+
+// Step 1: Request password reset - sends verification code to email
+app.post('/api/forgot-password', async function(req, res) {
+    try {
+        const { email } = req.body;
+        
+        if (!email) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Email is required' 
+            });
+        }
+        
+        const normalizedEmail = email.toLowerCase();
+        console.log(`🔐 Password reset requested for: ${normalizedEmail}`);
+        
+        // Find user by email
+        let user = null;
+        if (useMongoDb) {
+            user = await database.getUserByEmail(normalizedEmail);
+        } else {
+            user = Object.values(usersDB).find(u => u.email === normalizedEmail);
+        }
+        
+        // Always return success to prevent email enumeration attacks
+        // But only send email if user exists
+        if (user && user.password) {
+            // Check rate limiting (max 3 requests per 10 minutes)
+            const existingRequest = passwordResetCodes.get(normalizedEmail);
+            if (existingRequest && existingRequest.attempts >= 3 && 
+                Date.now() < existingRequest.rateLimitExpires) {
+                return res.status(429).json({
+                    success: false,
+                    message: 'Too many reset attempts. Please try again in 10 minutes.'
+                });
+            }
+            
+            // Generate verification code
+            const code = generateVerificationCode();
+            const expiresAt = Date.now() + (10 * 60 * 1000); // 10 minutes
+            
+            // Store the code
+            passwordResetCodes.set(normalizedEmail, {
+                code,
+                expiresAt,
+                attempts: (existingRequest?.attempts || 0) + 1,
+                rateLimitExpires: Date.now() + (10 * 60 * 1000),
+                userId: user.id
+            });
+            
+            // Send email
+            try {
+                await sendPasswordResetEmail(normalizedEmail, code, user.name);
+                console.log(`📧 Password reset code sent to: ${normalizedEmail}`);
+            } catch (emailError) {
+                console.error('Failed to send reset email:', emailError);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to send email. Please try again later.'
+                });
+            }
+        } else if (user && !user.password) {
+            // User exists but uses Google OAuth only
+            return res.json({
+                success: false,
+                message: 'This account uses Google Sign-In. Please login with Google.'
+            });
+        }
+        
+        // Generic success message (for security)
+        res.json({
+            success: true,
+            message: 'If an account exists with this email, a verification code has been sent.'
+        });
+        
+    } catch (error) {
+        console.error('Password reset request error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Something went wrong. Please try again.' 
+        });
+    }
+});
+
+// Step 2: Verify the reset code
+app.post('/api/verify-reset-code', async function(req, res) {
+    try {
+        const { email, code } = req.body;
+        
+        if (!email || !code) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Email and verification code are required' 
+            });
+        }
+        
+        const normalizedEmail = email.toLowerCase();
+        const resetData = passwordResetCodes.get(normalizedEmail);
+        
+        if (!resetData) {
+            return res.status(400).json({
+                success: false,
+                message: 'No reset request found. Please request a new code.'
+            });
+        }
+        
+        if (Date.now() > resetData.expiresAt) {
+            passwordResetCodes.delete(normalizedEmail);
+            return res.status(400).json({
+                success: false,
+                message: 'Verification code has expired. Please request a new one.'
+            });
+        }
+        
+        if (resetData.code !== code) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid verification code. Please check and try again.'
+            });
+        }
+        
+        // Code is valid - generate a temporary token for password reset
+        const resetToken = jwt.sign(
+            { email: normalizedEmail, purpose: 'password_reset' },
+            JWT_SECRET,
+            { expiresIn: '15m' }
+        );
+        
+        console.log(`✅ Reset code verified for: ${normalizedEmail}`);
+        res.json({
+            success: true,
+            message: 'Code verified successfully.',
+            resetToken
+        });
+        
+    } catch (error) {
+        console.error('Code verification error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Verification failed. Please try again.' 
+        });
+    }
+});
+
+// Step 3: Reset password with verified token
+app.post('/api/reset-password', async function(req, res) {
+    try {
+        const { resetToken, newPassword } = req.body;
+        
+        if (!resetToken || !newPassword) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Reset token and new password are required' 
+            });
+        }
+        
+        // Validate password strength
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be at least 6 characters long.'
+            });
+        }
+        
+        // Verify reset token
+        let tokenPayload;
+        try {
+            tokenPayload = jwt.verify(resetToken, JWT_SECRET);
+        } catch (err) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired reset token. Please start over.'
+            });
+        }
+        
+        if (tokenPayload.purpose !== 'password_reset') {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid reset token.'
+            });
+        }
+        
+        const normalizedEmail = tokenPayload.email;
+        
+        // Find user
+        let user = null;
+        if (useMongoDb) {
+            user = await database.getUserByEmail(normalizedEmail);
+        } else {
+            user = Object.values(usersDB).find(u => u.email === normalizedEmail);
+        }
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found.'
+            });
+        }
+        
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+        
+        // Update user password
+        user.password = hashedPassword;
+        user.passwordUpdatedAt = new Date().toISOString();
+        
+        // Save to database
+        await saveUser(user);
+        
+        // Clear the reset code
+        passwordResetCodes.delete(normalizedEmail);
+        
+        console.log(`✅ Password reset successful for: ${normalizedEmail}`);
+        res.json({
+            success: true,
+            message: 'Password reset successfully. You can now login with your new password.'
+        });
+        
+    } catch (error) {
+        console.error('Password reset error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Password reset failed. Please try again.' 
         });
     }
 });
