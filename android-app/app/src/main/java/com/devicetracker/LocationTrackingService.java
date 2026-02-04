@@ -35,7 +35,7 @@ public class LocationTrackingService extends Service {
     private static final String TAG = "LocationService";
     private static final String CHANNEL_ID = "LocationTrackingChannel";
     private static final int NOTIFICATION_ID = 1;
-    private static final long UPDATE_INTERVAL = 5 * 1000; // 5 seconds
+    private static final long UPDATE_INTERVAL = 30 * 1000; // 30 seconds
     
     // Broadcast action for session expiry - activities can listen for this
     public static final String ACTION_SESSION_EXPIRED = "com.devicetracker.SESSION_EXPIRED";
