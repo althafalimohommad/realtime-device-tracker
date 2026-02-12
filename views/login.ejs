@@ -22,151 +22,138 @@
             position: relative;
         }
 
-        /* Animated Gradient Background */
+        /* Smooth Animated Gradient Background */
         .background {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background: linear-gradient(-45deg, #667eea, #764ba2, #e90e0e, #4facfe, #fe0011, #a18cd1);
+            background-size: 400% 400%;
+            animation: gradientShift 29s ease infinite;
             z-index: -2;
         }
 
-        /* Animated Blur Blobs */
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            25% { background-position: 100% 50%; }
+            50% { background-position: 100% 100%; }
+            75% { background-position: 0% 100%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Floating Blur Blobs - Smooth Animation */
         .blob {
             position: fixed;
             border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0.7;
+            filter: blur(100px);
+            opacity: 0.6;
             z-index: -1;
-            animation: float 15s ease-in-out infinite;
+            animation: floatSmooth 34s ease-in-out infinite;
         }
 
         .blob-1 {
-            width: 600px;
-            height: 600px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            top: -200px;
+            width: 700px;
+            height: 700px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%);
+            top: -300px;
             left: -200px;
             animation-delay: 0s;
         }
 
         .blob-2 {
-            width: 500px;
-            height: 500px;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            bottom: -150px;
-            right: -150px;
-            animation-delay: -5s;
+            width: 600px;
+            height: 600px;
+            background: linear-gradient(135deg, rgba(240, 147, 251, 0.7) 0%, rgba(245, 87, 108, 0.7) 100%);
+            bottom: -200px;
+            right: -200px;
+            animation-delay: -8s;
         }
 
         .blob-3 {
-            width: 400px;
-            height: 400px;
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            animation-delay: -10s;
+            width: 500px;
+            height: 500px;
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.6) 0%, rgba(254, 0, 0, 0.6) 100%);
+            top: 40%;
+            left: 60%;
+            animation-delay: -16s;
         }
 
         .blob-4 {
-            width: 350px;
-            height: 350px;
-            background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
-            bottom: 20%;
-            left: 10%;
-            animation-delay: -7s;
+            width: 450px;
+            height: 450px;
+            background: linear-gradient(135deg, rgba(161, 140, 209, 0.7) 0%, rgba(251, 194, 235, 0.7) 100%);
+            bottom: 30%;
+            left: 5%;
+            animation-delay: -12s;
         }
 
-        @keyframes float {
+        @keyframes floatSmooth {
             0%, 100% {
-                transform: translate(0, 0) scale(1);
+                transform: translate(0, 0) scale(1) rotate(0deg);
             }
-            25% {
-                transform: translate(50px, -50px) scale(1.1);
+            20% {
+                transform: translate(80px, -60px) scale(1.1) rotate(5deg);
             }
-            50% {
-                transform: translate(-30px, 30px) scale(0.95);
+            40% {
+                transform: translate(-50px, 40px) scale(0.95) rotate(-3deg);
             }
-            75% {
-                transform: translate(40px, 20px) scale(1.05);
+            60% {
+                transform: translate(60px, 30px) scale(1.05) rotate(3deg);
+            }
+            80% {
+                transform: translate(-40px, -50px) scale(1) rotate(-5deg);
             }
         }
 
-        /* Glassmorphism Login Card */
+        /* Glass Morphism Login Card */
         .login-container {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.15);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border-radius: 24px;
-            padding: 50px 45px;
+            padding: 40px 50px;
             box-shadow: 
-                0 25px 50px -12px rgba(0, 0, 0, 0.25),
-                0 0 0 1px rgba(255, 255, 255, 0.1);
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.25);
             text-align: center;
-            max-width: 420px;
+            max-width: 520px;
             width: 100%;
             position: relative;
             z-index: 1;
         }
 
         .logo {
-            width: 70px;
-            height: 70px;
-            margin: 0 auto 25px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            object-fit: cover;
         }
-
-        .logo-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 4px;
-            padding: 12px;
-        }
-
-        .logo-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 3px;
-            background: white;
-        }
-
-        .logo-dot:nth-child(1) { background: #ff6b6b; }
-        .logo-dot:nth-child(2) { background: #feca57; }
-        .logo-dot:nth-child(3) { background: #48dbfb; }
-        .logo-dot:nth-child(4) { background: #1dd1a1; }
-        .logo-dot:nth-child(5) { background: #ff9ff3; }
-        .logo-dot:nth-child(6) { background: #54a0ff; }
-        .logo-dot:nth-child(7) { background: #5f27cd; }
-        .logo-dot:nth-child(8) { background: #00d2d3; }
-        .logo-dot:nth-child(9) { background: #ff6b6b; }
 
         h1 {
-            color: #1a1a2e;
+            color: #ffffff;
             font-size: 28px;
             font-weight: 700;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
         .subtitle {
-            color: #6b7280;
-            margin-bottom: 35px;
+            color: rgba(255, 255, 255, 0.85);
+            margin-bottom: 30px;
             font-size: 15px;
         }
 
         .login-form {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .input-group {
-            margin-bottom: 18px;
+            margin-bottom: 16px;
             text-align: left;
             position: relative;
         }
@@ -175,6 +162,8 @@
             position: relative;
             display: flex;
             align-items: center;
+            overflow: hidden;
+            border-radius: 12px;
         }
 
         .input-icon {
@@ -182,84 +171,70 @@
             left: 16px;
             width: 20px;
             height: 20px;
-            color: #9ca3af;
+            color: rgba(255, 255, 255, 0.6);
             pointer-events: none;
             z-index: 1;
         }
 
         .input-group input {
             width: 100%;
-            padding: 16px 16px 16px 50px;
-            border: 2px solid #e5e7eb;
-            border-radius: 14px;
+            padding: 14px 16px 14px 50px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
             font-size: 15px;
             transition: all 0.3s ease;
             outline: none;
-            background: #f9fafb;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            color: #ffffff;
         }
 
         .input-group input::placeholder {
-            color: #9ca3af;
+            color: rgba(255, 255, 255, 0.6);
         }
 
         .input-group input:focus {
-            border-color: #667eea;
-            background: white;
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-        }
-
-        .input-label {
-            position: absolute;
-            left: 50px;
-            top: -10px;
-            background: white;
-            padding: 0 8px;
-            font-size: 12px;
-            font-weight: 600;
-            color: #667eea;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .input-group input:focus + .input-label,
-        .input-group input:not(:placeholder-shown) + .input-label {
-            opacity: 1;
+            border-color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
         }
 
         .error-message {
-            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-            color: #dc2626;
-            padding: 14px 16px;
-            border-radius: 12px;
-            margin-bottom: 18px;
+            background: rgba(220, 38, 38, 0.2);
+            color: #fecaca;
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 16px;
             font-size: 14px;
             display: none;
-            border: 1px solid #fca5a5;
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            backdrop-filter: blur(10px);
         }
 
         .success-message {
-            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-            color: #059669;
-            padding: 14px 16px;
-            border-radius: 12px;
-            margin-bottom: 18px;
+            background: rgba(16, 185, 129, 0.2);
+            color: #a7f3d0;
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 16px;
             font-size: 14px;
             display: none;
-            border: 1px solid #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            backdrop-filter: blur(10px);
         }
 
         .login-btn {
             width: 100%;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 16px 32px;
-            border-radius: 14px;
+            padding: 14px 32px;
+            border-radius: 12px;
             border: none;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
             position: relative;
             overflow: hidden;
         }
@@ -271,7 +246,7 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
             transition: left 0.5s;
         }
 
@@ -280,8 +255,8 @@
         }
 
         .login-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
         }
 
         .login-btn:active {
@@ -295,64 +270,23 @@
         }
 
         .register-link {
-            margin-top: 25px;
-            color: #6b7280;
+            margin-top: 20px;
+            color: rgba(255, 255, 255, 0.8);
             font-size: 14px;
         }
 
         .register-link strong {
-            color: #667eea;
+            color: #ffffff;
             cursor: pointer;
-        }
-
-        .features {
-            margin-top: 35px;
-            padding-top: 25px;
-            border-top: 1px solid #e5e7eb;
-        }
-
-        .feature {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            margin-bottom: 14px;
-            color: #4b5563;
-            font-size: 14px;
-            padding: 8px 12px;
-            border-radius: 10px;
-            transition: background 0.3s;
-        }
-
-        .feature:hover {
-            background: rgba(102, 126, 234, 0.05);
-        }
-
-        .feature-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-        }
-
-        .feature-icon.lock {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-        }
-
-        .feature-icon.map {
-            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-        }
-
-        .feature-icon.bell {
-            background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+            text-decoration: underline;
+            text-underline-offset: 2px;
         }
 
         /* Mobile responsiveness */
-        @media (max-width: 480px) {
+        @media (max-width: 560px) {
             .login-container {
-                padding: 35px 25px;
+                padding: 30px 25px;
+                max-width: 100%;
             }
 
             h1 {
@@ -360,13 +294,78 @@
             }
 
             .blob {
-                filter: blur(60px);
+                filter: blur(80px);
             }
 
             .blob-1, .blob-2, .blob-3, .blob-4 {
-                width: 300px;
-                height: 300px;
+                width: 350px;
+                height: 350px;
             }
+        }
+
+        /* Glass Particle Effect */
+        .particle-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            border-radius: 12px;
+            z-index: 2;
+        }
+
+        .glass-particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,255,255,0.95) 30%, rgba(255,255,255,0.6) 50%, transparent 70%);
+            box-shadow: 0 0 4px rgb(15, 197, 238), 0 0 8px rgba(255,255,255,0.5);
+            filter: blur(0.3px);
+            animation: particleFade 1.5s ease-out forwards;
+        }
+
+        @keyframes particleFade {
+            0% {
+                opacity: 1;
+                transform: scale(1) translate(0, 0);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.3) translate(var(--tx), var(--ty));
+            }
+        }
+
+        .cursor-glow {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            pointer-events: none;
+            background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.15) 30%, transparent 70%);
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1;
+        }
+
+        .input-wrapper:hover .cursor-glow,
+        .button-wrapper:hover .cursor-glow {
+            opacity: 1;
+        }
+
+        .button-wrapper {
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        .button-wrapper .cursor-glow {
+            width: 120px;
+            height: 120px;
+            background: radial-gradient(circle, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.2) 30%, transparent 70%);
+            z-index: 3;
         }
     </style>
 </head>
@@ -379,19 +378,7 @@
     <div class="blob blob-4"></div>
 
     <div class="login-container">
-        <div class="logo">
-            <div class="logo-grid">
-                <div class="logo-dot"></div>
-                <div class="logo-dot"></div>
-                <div class="logo-dot"></div>
-                <div class="logo-dot"></div>
-                <div class="logo-dot"></div>
-                <div class="logo-dot"></div>
-                <div class="logo-dot"></div>
-                <div class="logo-dot"></div>
-                <div class="logo-dot"></div>
-            </div>
-        </div>
+        <img src="/logo.png" alt="Device Tracker" class="logo">
         
         <h1>Welcome Back</h1>
         <p class="subtitle">Track and locate your devices in real-time</p>
@@ -403,46 +390,133 @@
         <form id="loginForm" class="login-form">
             <div class="input-group">
                 <div class="input-wrapper">
+                    <div class="particle-container"></div>
+                    <div class="cursor-glow"></div>
                     <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                     <input type="email" id="email" name="email" placeholder="Email Address" required autocomplete="email">
-                    <span class="input-label">Email</span>
                 </div>
             </div>
             <div class="input-group">
                 <div class="input-wrapper">
+                    <div class="particle-container"></div>
+                    <div class="cursor-glow"></div>
                     <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                     <input type="password" id="password" name="password" placeholder="Password" required autocomplete="current-password">
-                    <span class="input-label">Password</span>
                 </div>
             </div>
-            <button type="submit" class="login-btn" id="loginBtn">Sign In</button>
+            <div class="button-wrapper">
+                <div class="particle-container"></div>
+                <div class="cursor-glow"></div>
+                <button type="submit" class="login-btn" id="loginBtn">Sign In</button>
+            </div>
         </form>
 
         <div class="register-link">
             Don't have an account? <strong>Register on the mobile app</strong>
         </div>
-
-        <div class="features">
-            <div class="feature">
-                <span class="feature-icon lock">🔒</span>
-                <span>End-to-end Encryption</span>
-            </div>
-            <div class="feature">
-                <span class="feature-icon map">🗺️</span>
-                <span>Real-time Location Tracking</span>
-            </div>
-            <div class="feature">
-                <span class="feature-icon bell">🔔</span>
-                <span>Alert & Locate Lost Devices</span>
-            </div>
-        </div>
     </div>
 
     <script>
+        // Glass Particle Effect - iOS 26 Style
+        const inputWrappers = document.querySelectorAll('.input-wrapper, .button-wrapper');
+        
+        inputWrappers.forEach(wrapper => {
+            const particleContainer = wrapper.querySelector('.particle-container');
+            const cursorGlow = wrapper.querySelector('.cursor-glow');
+            let isHovering = false;
+            let lastX = 0, lastY = 0;
+            let particleInterval = null;
+            
+            function createParticle(x, y) {
+                const particle = document.createElement('div');
+                particle.className = 'glass-particle';
+                
+                // Random size between 1-4px (smaller)
+                const size = Math.random() * 3 + 1;
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
+                
+                // Position at cursor
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                
+                // Random drift direction (increased range)
+                const tx = (Math.random() - 0.5) * 120;
+                const ty = (Math.random() - 0.5) * 80 - 30;
+                particle.style.setProperty('--tx', tx + 'px');
+                particle.style.setProperty('--ty', ty + 'px');
+                
+                // Random animation duration
+                particle.style.animationDuration = (Math.random() * 0.8 + 0.8) + 's';
+                
+                particleContainer.appendChild(particle);
+                
+                // Remove particle after animation
+                setTimeout(() => {
+                    particle.remove();
+                }, 1600);
+            }
+            
+            function createParticleBurst(x, y, count = 3) {
+                for (let i = 0; i < count; i++) {
+                    const offsetX = (Math.random() - 0.5) * 50;
+                    const offsetY = (Math.random() - 0.5) * 30;
+                    createParticle(x + offsetX, y + offsetY);
+                }
+            }
+            
+            wrapper.addEventListener('mouseenter', () => {
+                isHovering = true;
+            });
+            
+            wrapper.addEventListener('mouseleave', () => {
+                isHovering = false;
+                cursorGlow.style.opacity = '0';
+                if (particleInterval) {
+                    clearInterval(particleInterval);
+                    particleInterval = null;
+                }
+            });
+            
+            wrapper.addEventListener('mousemove', (e) => {
+                if (!isHovering) return;
+                
+                const rect = wrapper.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                // Update cursor glow position
+                cursorGlow.style.left = x + 'px';
+                cursorGlow.style.top = y + 'px';
+                cursorGlow.style.opacity = '1';
+                
+                // Calculate movement distance
+                const dx = x - lastX;
+                const dy = y - lastY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                // Create particles based on movement
+                if (distance > 5) {
+                    createParticleBurst(x, y, Math.min(Math.floor(distance / 5), 6));
+                    lastX = x;
+                    lastY = y;
+                }
+                
+                // Continuous particle emission while hovering
+                if (!particleInterval) {
+                    particleInterval = setInterval(() => {
+                        if (isHovering) {
+                            createParticle(lastX + (Math.random() - 0.5) * 60, lastY + (Math.random() - 0.5) * 40);
+                        }
+                    }, 80);
+                }
+            });
+        });
+
         const loginForm = document.getElementById('loginForm');
         const errorMessage = document.getElementById('errorMessage');
         const successMessage = document.getElementById('successMessage');
