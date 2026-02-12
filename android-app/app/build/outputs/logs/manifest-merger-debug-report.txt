@@ -147,11 +147,11 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\Mo
 	android:label
 		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:20:9-41
 	android:roundIcon
-		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:21:9-65
+		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:21:9-48
 	tools:targetApi
 		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:24:9-29
 	android:icon
-		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:19:9-60
+		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:19:9-43
 	android:allowBackup
 		ADDED from C:\Users\Mohmad Althaf Ali\OneDrive\Desktop\realtime device tracker\android-app\app\src\main\AndroidManifest.xml:18:9-35
 	android:theme

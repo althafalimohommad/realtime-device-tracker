@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Device Tracker - Abstract</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12pt;
+            line-height: 1.6;
+            color: #000;
+            background: #fff;
+            padding: 1in;
+            max-width: 8.5in;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-size: 16pt;
+            text-align: center;
+            margin-bottom: 0.3in;
+            font-weight: bold;
+        }
+        
+        h2 {
+            font-size: 14pt;
+            text-align: center;
+            margin-bottom: 0.4in;
+            font-weight: normal;
+            font-style: italic;
+        }
+        
+        h3 {
+            font-size: 12pt;
+            margin-top: 0.2in;
+            margin-bottom: 0.1in;
+            font-weight: bold;
+        }
+        
+        p {
+            text-align: justify;
+            margin-bottom: 0.15in;
+            text-indent: 0.5in;
+        }
+        
+        p.no-indent {
+            text-indent: 0;
+        }
+        
+        ul {
+            margin-left: 0.5in;
+            margin-bottom: 0.15in;
+        }
+        
+        li {
+            margin-bottom: 0.05in;
+        }
+        
+        .keywords {
+            margin-top: 0.3in;
+            font-style: italic;
+        }
+        
+        .keywords strong {
+            font-style: normal;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Abstract</h1>
+    <h2>Real-Time Device Tracker: A Secure Cross-Platform Location Monitoring System</h2>
+    
+    <p>The Real-Time Device Tracker is a full-stack web and mobile application designed to provide secure, real-time location monitoring across multiple devices. Similar to commercial "Find My Device" solutions, this system enables users to track their smartphones, tablets, and computers through an interactive web-based map interface with live location updates.</p>
+    
+    <p>With the increasing reliance on mobile devices, the risk of device loss or theft has become a significant concern. Existing solutions often lack transparency, require subscription fees, or raise privacy concerns by storing sensitive location data on third-party servers. This project addresses these challenges by providing a privacy-focused alternative featuring end-to-end encryption using AES-256-GCM for all location data.</p>
+    
+    <p>The system employs a client-server architecture built on Node.js with Express.js for the backend, Socket.IO for real-time bidirectional WebSocket communication, and Leaflet.js with OpenStreetMap for interactive mapping. A native Android application continuously tracks device location through a foreground service, ensuring reliable updates even when the app is backgrounded. User authentication is implemented using email/password credentials with bcrypt password hashing and JWT tokens for secure session management.</p>
+    
+    <p>Key features include real-time tracking with zero-delay updates, multi-device support with automatic detection of over 100 device models, secure location sharing via time-limited revocable links, battery and connectivity monitoring, and cross-platform accessibility through a responsive web interface. The application prioritizes user privacy through per-user encryption keys, 24-hour session expiration, and auto-expiring share tokens.</p>
+    
+    <p>The system is deployed on Render's cloud platform, leveraging automated deployments, SSL certificates, and scalable infrastructure. This project demonstrates a practical implementation of real-time location services combining modern web technologies with mobile development, providing a transparent and privacy-focused alternative to proprietary tracking solutions.</p>
+    
+    <p class="keywords"><strong>Keywords:</strong> Real-time tracking, WebSocket, Socket.IO, GPS, End-to-end encryption, Node.js, Android, JWT authentication, Location services</p>
+</body>
+</html>

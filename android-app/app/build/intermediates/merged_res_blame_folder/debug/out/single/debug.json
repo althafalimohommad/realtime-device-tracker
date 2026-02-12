@@ -1,11 +1,27 @@
 [
     {
+        "merged": "com.devicetracker.app-merged_res-39:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "com.devicetracker.app-main-41:/mipmap-xhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.devicetracker.app-merged_res-39:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "com.devicetracker.app-main-41:/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.devicetracker.app-merged_res-39:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "com.devicetracker.app-main-41:/mipmap-mdpi/ic_launcher.png"
+    },
+    {
         "merged": "com.devicetracker.app-merged_res-39:/layout_activity_login.xml.flat",
         "source": "com.devicetracker.app-main-41:/layout/activity_login.xml"
     },
     {
         "merged": "com.devicetracker.app-merged_res-39:/layout_activity_main.xml.flat",
         "source": "com.devicetracker.app-main-41:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.devicetracker.app-merged_res-39:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "com.devicetracker.app-main-41:/mipmap-xxxhdpi/ic_launcher.png"
     },
     {
         "merged": "com.devicetracker.app-merged_res-39:/drawable_avatar_circle.xml.flat",
@@ -18,6 +34,10 @@
     {
         "merged": "com.devicetracker.app-merged_res-39:/layout_activity_forgot_password.xml.flat",
         "source": "com.devicetracker.app-main-41:/layout/activity_forgot_password.xml"
+    },
+    {
+        "merged": "com.devicetracker.app-merged_res-39:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "com.devicetracker.app-main-41:/mipmap-xxhdpi/ic_launcher.png"
     },
     {
         "merged": "com.devicetracker.app-merged_res-39:/drawable_card_bg.xml.flat",

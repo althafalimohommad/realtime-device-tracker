@@ -22,7 +22,7 @@ public class ApiClient {
 
     private static final String TAG = "ApiClient";
     private static final String BASE_URL =
-            "https://realtime-device-tracker-s9ua.onrender.com";
+            "https://devicetracker.tech";
     
     // Token valid for 7 days
     public static final long TOKEN_VALIDITY_MS = 7L * 24 * 60 * 60 * 1000; // 7 days

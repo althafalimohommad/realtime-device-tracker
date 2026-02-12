@@ -38,5 +38,6 @@ layout activity_forgot_password
 layout activity_login
 layout activity_main
 layout activity_register
+mipmap ic_launcher
 string app_name
 style AppTheme
