@@ -55,11 +55,32 @@ public class LoginActivity extends AppCompatActivity {
 
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
 
-        // 🔐 If already logged in, skip login
-        if (prefs.getString("jwt", null) != null &&
-            prefs.getString("userId", null) != null) {
-            navigateToMainActivity();
-            return;
+        // 🔐 If already logged in, check token validity
+        String jwt = prefs.getString("jwt", null);
+        String userId = prefs.getString("userId", null);
+        
+        if (jwt != null && userId != null) {
+            // Check if token is expired or about to expire
+            long tokenExpiry = prefs.getLong("tokenExpiry", 0);
+            long now = System.currentTimeMillis();
+            long hoursRemaining = (tokenExpiry - now) / (60 * 60 * 1000);
+            
+            if (tokenExpiry > 0 && now >= tokenExpiry) {
+                // Token expired - try to refresh before forcing re-login
+                Log.d(TAG, "Token expired, attempting refresh...");
+                tryRefreshExpiredToken(prefs);
+                return;
+            } else if (tokenExpiry > 0 && hoursRemaining < 48) {
+                // Token expiring soon - schedule refresh and continue
+                Log.d(TAG, "Token expiring in " + hoursRemaining + " hours, scheduling refresh");
+                TokenRefreshWorker.scheduleImmediateCheck(this);
+                navigateToMainActivity();
+                return;
+            } else {
+                // Token valid
+                navigateToMainActivity();
+                return;
+            }
         }
 
         setContentView(R.layout.activity_login);
@@ -92,6 +113,107 @@ public class LoginActivity extends AppCompatActivity {
         }
         
         // Navigate to Register
+        tvRegister.setOnClickListener(v -> {
+            startActivity(new Intent(LoginActivity.this, RegisterActivity.class));
+        });
+    }
+
+    // ===============================
+    // TOKEN REFRESH (ON APP OPEN)
+    // ===============================
+    
+    /**
+     * Try to refresh an expired token before forcing re-login.
+     * If the server still accepts the old token, user stays logged in.
+     */
+    private void tryRefreshExpiredToken(SharedPreferences prefs) {
+        setContentView(R.layout.activity_login);
+        
+        // Show a loading state
+        progressBar = findViewById(R.id.progressBar);
+        tvStatus = findViewById(R.id.tvStatus);
+        
+        if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
+        if (tvStatus != null) {
+            tvStatus.setVisibility(View.VISIBLE);
+            tvStatus.setText("Reconnecting...");
+        }
+        
+        // Attempt token refresh
+        ApiClient apiClient = new ApiClient(this);
+        apiClient.refreshToken(new ApiClient.TokenRefreshCallback() {
+            @Override
+            public void onRefreshed(String newToken) {
+                Log.d(TAG, "✅ Expired token refreshed successfully!");
+                runOnUiThread(() -> {
+                    // Token refreshed - go to main
+                    TokenRefreshWorker.schedule(LoginActivity.this);
+                    navigateToMainActivity();
+                });
+            }
+            
+            @Override
+            public void onFailed(String error) {
+                Log.w(TAG, "Token refresh failed: " + error);
+                runOnUiThread(() -> {
+                    // Clear auth data and show login
+                    prefs.edit()
+                            .remove("jwt")
+                            .remove("tokenExpiry")
+                            .remove("loginTimestamp")
+                            .remove("lastTokenRefresh")
+                            .apply();
+                    
+                    if (progressBar != null) progressBar.setVisibility(View.GONE);
+                    if (tvStatus != null) tvStatus.setVisibility(View.GONE);
+                    
+                    // Show message
+                    Toast.makeText(LoginActivity.this,
+                            "Session expired. Please login again.",
+                            Toast.LENGTH_LONG).show();
+                    
+                    // Reinitialize login UI
+                    initializeLoginUI();
+                });
+            }
+        });
+    }
+    
+    /**
+     * Initialize all login UI elements (called after failed token refresh)
+     */
+    private void initializeLoginUI() {
+        etEmail = findViewById(R.id.etEmail);
+        etPassword = findViewById(R.id.etPassword);
+        btnLogin = findViewById(R.id.btnLogin);
+        tvRegister = findViewById(R.id.tvRegister);
+        tvForgotPassword = findViewById(R.id.tvForgotPassword);
+        progressBar = findViewById(R.id.progressBar);
+        tvStatus = findViewById(R.id.tvStatus);
+
+        httpClient = new OkHttpClient();
+
+        // Pre-fill email if we have it stored
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String storedEmail = prefs.getString("userEmail", null);
+        if (storedEmail != null && etEmail != null) {
+            etEmail.setText(storedEmail);
+        }
+
+        btnLogin.setOnClickListener(v -> validateAndLogin());
+        
+        if (tvForgotPassword != null) {
+            tvForgotPassword.setVisibility(View.GONE);
+            tvForgotPassword.setOnClickListener(v -> {
+                String email = etEmail.getText().toString().trim();
+                Intent intent = new Intent(LoginActivity.this, ForgotPasswordActivity.class);
+                if (!email.isEmpty()) {
+                    intent.putExtra("email", email);
+                }
+                startActivity(intent);
+            });
+        }
+        
         tvRegister.setOnClickListener(v -> {
             startActivity(new Intent(LoginActivity.this, RegisterActivity.class));
         });
@@ -188,20 +310,29 @@ public class LoginActivity extends AppCompatActivity {
                                 // Clear old data
                                 prefs.edit().clear().apply();
                                 
-                                // Calculate token expiry (7 days from now)
-                                long tokenExpiry = System.currentTimeMillis() + (7L * 24 * 60 * 60 * 1000);
+                                // Store current timestamp as login time
+                                long loginTimestamp = System.currentTimeMillis();
                                 
-                                // Save new auth data
+                                // Calculate token expiry (7 days from login)
+                                long tokenExpiry = loginTimestamp + (7L * 24 * 60 * 60 * 1000);
+                                
+                                // Save new auth data with login timestamp
                                 prefs.edit()
                                         .putString("jwt", token)
                                         .putString("userId", userId)
                                         .putString("userName", userName)
                                         .putString("userEmail", userEmail)
                                         .putString("authType", "email")
+                                        .putLong("loginTimestamp", loginTimestamp)
                                         .putLong("tokenExpiry", tokenExpiry)
+                                        .putLong("lastTokenRefresh", loginTimestamp)
                                         .apply();
 
                                 Log.d(TAG, "✅ Login successful, JWT saved");
+                                Log.d(TAG, "Token expires at: " + new java.util.Date(tokenExpiry));
+                                
+                                // Schedule background token refresh worker
+                                TokenRefreshWorker.schedule(LoginActivity.this);
                                 
                                 setLoading(false, "");
                                 Toast.makeText(LoginActivity.this,

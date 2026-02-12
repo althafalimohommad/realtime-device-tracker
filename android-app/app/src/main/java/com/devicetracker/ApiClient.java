@@ -24,11 +24,16 @@ public class ApiClient {
     private static final String BASE_URL =
             "https://realtime-device-tracker-s9ua.onrender.com";
     
-    // Refresh token when less than 1 day remains (token valid for 7 days)
-    private static final long TOKEN_REFRESH_THRESHOLD = 24 * 60 * 60 * 1000; // 1 day in ms
+    // Token valid for 7 days
+    public static final long TOKEN_VALIDITY_MS = 7L * 24 * 60 * 60 * 1000; // 7 days
+    
+    // Refresh token when less than 2 days remain (start refreshing on day 5)
+    // This gives a bigger window to handle battery optimization delays
+    public static final long TOKEN_REFRESH_THRESHOLD_MS = 48 * 60 * 60 * 1000L; // 2 days in ms
 
     private final OkHttpClient client;
     private final SharedPreferences prefs;
+    private final Context context;
     private final String userAgent;
     private boolean isRefreshingToken = false;
 
@@ -50,6 +55,7 @@ public class ApiClient {
                 .build();
 
         Context appContext = context.getApplicationContext();
+        this.context = appContext;
         this.prefs = appContext.getSharedPreferences("DeviceTracker", Context.MODE_PRIVATE);
         this.userAgent =
                 Build.MANUFACTURER + " " + Build.MODEL + " Android " + Build.VERSION.RELEASE;
@@ -167,13 +173,23 @@ public class ApiClient {
     
     /**
      * Check if token needs refresh (less than 1 day remaining)
+     * Token is valid for 7 days, refresh on day 6 (when < 24 hours remain)
      */
     public boolean shouldRefreshToken() {
         long tokenExpiry = prefs.getLong("tokenExpiry", 0);
+        long loginTimestamp = prefs.getLong("loginTimestamp", 0);
+        
+        // If no expiry stored but we have login timestamp, calculate it
+        if (tokenExpiry == 0 && loginTimestamp > 0) {
+            tokenExpiry = loginTimestamp + TOKEN_VALIDITY_MS;
+            prefs.edit().putLong("tokenExpiry", tokenExpiry).apply();
+        }
+        
         if (tokenExpiry == 0) return false;
         
-        long timeRemaining = tokenExpiry - System.currentTimeMillis();
-        boolean shouldRefresh = timeRemaining > 0 && timeRemaining < TOKEN_REFRESH_THRESHOLD;
+        long now = System.currentTimeMillis();
+        long timeRemaining = tokenExpiry - now;
+        boolean shouldRefresh = timeRemaining > 0 && timeRemaining < TOKEN_REFRESH_THRESHOLD_MS;
         
         if (shouldRefresh) {
             Log.d(TAG, "Token expires in " + (timeRemaining / 3600000) + " hours - needs refresh");
@@ -186,7 +202,33 @@ public class ApiClient {
      */
     public boolean isTokenExpired() {
         long tokenExpiry = prefs.getLong("tokenExpiry", 0);
+        long loginTimestamp = prefs.getLong("loginTimestamp", 0);
+        
+        // If no expiry but we have login timestamp, calculate it
+        if (tokenExpiry == 0 && loginTimestamp > 0) {
+            tokenExpiry = loginTimestamp + TOKEN_VALIDITY_MS;
+        }
+        
         return tokenExpiry > 0 && System.currentTimeMillis() >= tokenExpiry;
+    }
+    
+    /**
+     * Get token status info for debugging
+     */
+    public String getTokenStatusInfo() {
+        long tokenExpiry = prefs.getLong("tokenExpiry", 0);
+        long loginTimestamp = prefs.getLong("loginTimestamp", 0);
+        long lastRefresh = prefs.getLong("lastTokenRefresh", 0);
+        long now = System.currentTimeMillis();
+        
+        if (tokenExpiry == 0) return "No token expiry set";
+        
+        long hoursRemaining = (tokenExpiry - now) / (60 * 60 * 1000);
+        long daysSinceLogin = loginTimestamp > 0 ? (now - loginTimestamp) / (24 * 60 * 60 * 1000) : -1;
+        long hoursSinceRefresh = lastRefresh > 0 ? (now - lastRefresh) / (60 * 60 * 1000) : -1;
+        
+        return String.format("Hours remaining: %d, Days since login: %d, Hours since refresh: %d",
+                hoursRemaining, daysSinceLogin, hoursSinceRefresh);
     }
     
     /**
@@ -235,10 +277,12 @@ public class ApiClient {
                             long newExpiry = json.optLong("tokenExpiry", 
                                     System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000);
                             
-                            // Save new token
+                            // Save new token with updated timestamps
+                            long now = System.currentTimeMillis();
                             prefs.edit()
                                     .putString("jwt", newToken)
                                     .putLong("tokenExpiry", newExpiry)
+                                    .putLong("lastTokenRefresh", now)
                                     .apply();
                             
                             Log.d(TAG, "✅ Token refreshed successfully, valid until: " + 

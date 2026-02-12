@@ -87,7 +87,12 @@ public class LocationTrackingService extends Service {
         startLocationUpdates();
         scheduleWatchdog();
         scheduleTokenRefreshCheck();
+        
+        // Ensure WorkManager-based token refresh is also scheduled
+        TokenRefreshWorker.schedule(this);
+        
         Log.d(TAG, "LocationTrackingService started successfully");
+        Log.d(TAG, "Token status: " + apiClient.getTokenStatusInfo());
     }
 
     @Override
@@ -117,16 +122,18 @@ public class LocationTrackingService extends Service {
     }
     
     /**
-     * Schedule periodic token refresh checks (every 6 hours)
+     * Schedule periodic token refresh checks (every 4 hours while service is running)
+     * This is a backup to the WorkManager-based TokenRefreshWorker
      */
     private void scheduleTokenRefreshCheck() {
-        final long CHECK_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours
+        final long CHECK_INTERVAL = 4 * 60 * 60 * 1000; // 4 hours
         
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
                 if (sessionExpired) return;
                 
+                Log.d(TAG, "Periodic token check - " + apiClient.getTokenStatusInfo());
                 checkAndRefreshToken();
                 handler.postDelayed(this, CHECK_INTERVAL);
             }
@@ -142,7 +149,10 @@ public class LocationTrackingService extends Service {
     private void checkAndRefreshToken() {
         if (apiClient == null || sessionExpired) return;
         
-        // Check if token is about to expire (less than 1 day remaining)
+        // Log current token status
+        Log.d(TAG, "Token check: " + apiClient.getTokenStatusInfo());
+        
+        // Check if token is about to expire (less than 2 days remaining)
         if (apiClient.shouldRefreshToken()) {
             Log.d(TAG, "Token expiring soon, refreshing...");
             updateNotification("Refreshing authentication...");

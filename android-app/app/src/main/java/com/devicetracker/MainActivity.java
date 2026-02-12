@@ -73,6 +73,31 @@ public class MainActivity extends AppCompatActivity {
         btnLogout.setOnClickListener(v -> logout());
         deviceCard.setOnClickListener(v -> showDeviceOptions());
         btnProfile.setOnClickListener(v -> showProfileMenu());
+        
+        // Schedule background token refresh worker
+        TokenRefreshWorker.schedule(this);
+        
+        // Create notification channel for expiry alerts
+        TokenExpiryNotification.createNotificationChannel(this);
+        
+        // Check if we were opened from a notification to show profile
+        if (getIntent().getBooleanExtra("showProfile", false)) {
+            // Show profile menu after a short delay to let UI initialize
+            new android.os.Handler().postDelayed(this::showProfileMenu, 500);
+        }
+    }
+    
+    @Override
+    protected void onResume() {
+        super.onResume();
+        
+        // Check and refresh token when app comes to foreground
+        // This catches cases where app was in background for a long time
+        TokenRefreshWorker.scheduleImmediateCheck(this);
+        
+        // Log token status for debugging
+        ApiClient apiClient = new ApiClient(this);
+        Log.d(TAG, "MainActivity resumed - " + apiClient.getTokenStatusInfo());
     }
     
     private void updateUI() {
@@ -292,12 +317,81 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showProfileMenu() {
+        // Get token status for display
+        ApiClient apiClient = new ApiClient(this);
+        String tokenStatus = apiClient.getTokenStatusInfo();
+        long tokenExpiry = prefs.getLong("tokenExpiry", 0);
+        String expiryInfo = "";
+        
+        if (tokenExpiry > 0) {
+            long hoursRemaining = (tokenExpiry - System.currentTimeMillis()) / (60 * 60 * 1000);
+            long daysRemaining = hoursRemaining / 24;
+            if (daysRemaining > 0) {
+                expiryInfo = "\n\nSession expires in " + daysRemaining + " days";
+            } else if (hoursRemaining > 0) {
+                expiryInfo = "\n\n⚠️ Session expires in " + hoursRemaining + " hours!";
+            } else {
+                expiryInfo = "\n\n❌ Session expired!";
+            }
+        }
+        
+        String message = (userEmail != null ? userEmail : "") + expiryInfo;
+        
         new AlertDialog.Builder(this)
                 .setTitle(userName != null ? userName : "Profile")
-                .setMessage(userEmail != null ? userEmail : "")
-                .setPositiveButton("Logout", (dialog, which) -> logout())
+                .setMessage(message)
+                .setPositiveButton("Refresh Token", (dialog, which) -> refreshTokenManually())
+                .setNeutralButton("Logout", (dialog, which) -> logout())
                 .setNegativeButton("Close", null)
                 .show();
+    }
+    
+    /**
+     * Manually refresh the JWT token
+     */
+    private void refreshTokenManually() {
+        Toast.makeText(this, "Refreshing session...", Toast.LENGTH_SHORT).show();
+        
+        ApiClient apiClient = new ApiClient(this);
+        apiClient.refreshToken(new ApiClient.TokenRefreshCallback() {
+            @Override
+            public void onRefreshed(String newToken) {
+                runOnUiThread(() -> {
+                    // Clear any expiry notification since we just refreshed
+                    TokenExpiryNotification.clearNotification(MainActivity.this);
+                    
+                    long tokenExpiry = prefs.getLong("tokenExpiry", 0);
+                    long daysRemaining = (tokenExpiry - System.currentTimeMillis()) / (24 * 60 * 60 * 1000);
+                    
+                    Toast.makeText(MainActivity.this, 
+                            "✅ Session refreshed! Valid for " + daysRemaining + " days", 
+                            Toast.LENGTH_LONG).show();
+                });
+            }
+            
+            @Override
+            public void onFailed(String error) {
+                runOnUiThread(() -> {
+                    if (error.contains("expired") || error.contains("re-login")) {
+                        new AlertDialog.Builder(MainActivity.this)
+                                .setTitle("Session Expired")
+                                .setMessage("Your session has expired. Please login again.")
+                                .setPositiveButton("Login", (dialog, which) -> {
+                                    // Clear and go to login
+                                    prefs.edit().clear().apply();
+                                    Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+                                    startActivity(intent);
+                                    finish();
+                                })
+                                .setCancelable(false)
+                                .show();
+                    } else {
+                        Toast.makeText(MainActivity.this, 
+                                "Refresh failed: " + error, Toast.LENGTH_LONG).show();
+                    }
+                });
+            }
+        });
     }
     
     private void logout() {
@@ -308,6 +402,12 @@ public class MainActivity extends AppCompatActivity {
                     // Stop service if running
                     Intent serviceIntent = new Intent(MainActivity.this, LocationTrackingService.class);
                     stopService(serviceIntent);
+                    
+                    // Cancel the token refresh worker
+                    TokenRefreshWorker.cancel(MainActivity.this);
+                    
+                    // Clear any expiry notifications
+                    TokenExpiryNotification.clearNotification(MainActivity.this);
                     
                     // Clear all preferences
                     SharedPreferences.Editor editor = prefs.edit();

@@ -160,8 +160,11 @@ public class RegisterActivity extends AppCompatActivity {
                                 SharedPreferences prefs = 
                                         getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
                                 
-                                // Calculate token expiry (7 days from now)
-                                long tokenExpiry = System.currentTimeMillis() + (7L * 24 * 60 * 60 * 1000);
+                                // Store current timestamp as login time
+                                long loginTimestamp = System.currentTimeMillis();
+                                
+                                // Calculate token expiry (7 days from registration)
+                                long tokenExpiry = loginTimestamp + (7L * 24 * 60 * 60 * 1000);
                                 
                                 prefs.edit()
                                         .putString("jwt", token)
@@ -169,10 +172,16 @@ public class RegisterActivity extends AppCompatActivity {
                                         .putString("userName", userName)
                                         .putString("userEmail", userEmail)
                                         .putString("authType", "email")
+                                        .putLong("loginTimestamp", loginTimestamp)
                                         .putLong("tokenExpiry", tokenExpiry)
+                                        .putLong("lastTokenRefresh", loginTimestamp)
                                         .apply();
 
                                 Log.d(TAG, "✅ Registration successful, JWT saved");
+                                Log.d(TAG, "Token expires at: " + new java.util.Date(tokenExpiry));
+                                
+                                // Schedule background token refresh worker
+                                TokenRefreshWorker.schedule(RegisterActivity.this);
                                 
                                 Toast.makeText(RegisterActivity.this,
                                         "Registration successful!", Toast.LENGTH_SHORT).show();

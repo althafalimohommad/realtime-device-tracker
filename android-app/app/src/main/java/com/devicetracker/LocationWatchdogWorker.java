@@ -2,6 +2,7 @@ package com.devicetracker;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.util.Log;
 
@@ -10,6 +11,8 @@ import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
 public class LocationWatchdogWorker extends Worker {
+
+    private static final String TAG = "LocationWatchdog";
 
     public LocationWatchdogWorker(@NonNull Context context, @NonNull WorkerParameters params) {
         super(context, params);
@@ -20,6 +23,20 @@ public class LocationWatchdogWorker extends Worker {
     public Result doWork() {
         try {
             Context ctx = getApplicationContext();
+            SharedPreferences prefs = ctx.getSharedPreferences("DeviceTracker", Context.MODE_PRIVATE);
+            
+            // Check if user is still logged in
+            String jwt = prefs.getString("jwt", null);
+            String userId = prefs.getString("userId", null);
+            
+            if (jwt == null || userId == null) {
+                Log.d(TAG, "User not logged in, skipping service restart");
+                return Result.success();
+            }
+            
+            // Also trigger a token refresh check via WorkManager
+            TokenRefreshWorker.scheduleImmediateCheck(ctx);
+            
             Intent intent = new Intent(ctx, LocationTrackingService.class);
             intent.setPackage(ctx.getPackageName());
 
@@ -28,10 +45,10 @@ public class LocationWatchdogWorker extends Worker {
             } else {
                 ctx.startService(intent);
             }
-            Log.d("LocationWatchdog", "Ensured LocationTrackingService is running");
+            Log.d(TAG, "Ensured LocationTrackingService is running");
             return Result.success();
         } catch (Exception e) {
-            Log.e("LocationWatchdog", "Failed to start service", e);
+            Log.e(TAG, "Failed to start service", e);
             return Result.retry();
         }
     }
