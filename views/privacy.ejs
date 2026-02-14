@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Privacy Policy - Realtime Device Tracker</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         * {
@@ -14,118 +14,387 @@
         }
 
         body {
-            font-family: 'Roboto', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            height: 100vh;
             padding: 20px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
+        /* Smooth Animated Gradient Background */
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(-45deg, #09133f, #370b64, #390637, #10314d, #064431, #23104d);
+            background-size: 400% 400%;
+            animation: gradientShift 29s ease infinite;
+            z-index: -2;
+        }
+
+        @keyframes gradientShift {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            25% {
+                background-position: 100% 50%;
+            }
+
+            50% {
+                background-position: 100% 100%;
+            }
+
+            75% {
+                background-position: 0% 100%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        /* Floating Blur Blobs */
+        .blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.6;
+            z-index: -1;
+            animation: floatSmooth 34s ease-in-out infinite;
+        }
+
+        .blob-1 {
+            width: 700px;
+            height: 700px;
+            background: linear-gradient(135deg, rgba(13, 26, 84, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%);
+            top: -300px;
+            left: -200px;
+            animation-delay: 0s;
+        }
+
+        .blob-2 {
+            width: 600px;
+            height: 600px;
+            background: linear-gradient(135deg, rgba(240, 147, 251, 0.7) 0%, rgba(245, 87, 108, 0.7) 100%);
+            bottom: -200px;
+            right: -200px;
+            animation-delay: -8s;
+        }
+
+        .blob-3 {
+            width: 500px;
+            height: 500px;
+            background: linear-gradient(135deg, rgba(19, 70, 114, 0.6) 0%, rgba(130, 14, 14, 0.6) 100%);
+            top: 40%;
+            left: 60%;
+            animation-delay: -16s;
+        }
+
+        .blob-4 {
+            width: 450px;
+            height: 450px;
+            background: linear-gradient(135deg, rgba(161, 140, 209, 0.7) 0%, rgba(120, 26, 93, 0.7) 100%);
+            bottom: 30%;
+            left: 5%;
+            animation-delay: -12s;
+        }
+
+        @keyframes floatSmooth {
+
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1) rotate(0deg);
+            }
+
+            20% {
+                transform: translate(80px, -60px) scale(1.1) rotate(5deg);
+            }
+
+            40% {
+                transform: translate(-50px, 40px) scale(0.95) rotate(-3deg);
+            }
+
+            60% {
+                transform: translate(60px, 30px) scale(1.05) rotate(3deg);
+            }
+
+            80% {
+                transform: translate(-40px, -50px) scale(1) rotate(-5deg);
+            }
+        }
+
+        /* Glass Morphism Container */
         .container {
-            max-width: 900px;
+            width: 100%;
+            max-width: 960px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
             margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            padding: 40px;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-radius: 24px;
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 36px 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Custom scrollbar inside container */
+        .container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 3px;
+        }
+
+        .container::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Back Button */
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 24px;
+            padding: 8px 16px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            transform: translateX(-3px);
+        }
+
+        .back-btn .material-icons {
+            font-size: 18px;
         }
 
         h1 {
-            color: #333;
-            margin-bottom: 10px;
+            color: #ffffff;
+            margin-bottom: 6px;
             font-size: 32px;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
         }
 
         .last-updated {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 30px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 13px;
+            margin-bottom: 36px;
         }
 
         h2 {
-            color: #667eea;
+            color: #ffffff;
             margin-top: 30px;
-            margin-bottom: 15px;
-            font-size: 24px;
+            margin-bottom: 14px;
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        p, li {
-            color: #555;
+        h2 .material-icons {
+            font-size: 22px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        p,
+        li {
+            color: rgba(255, 255, 255, 0.82);
             line-height: 1.8;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
+            font-size: 14.5px;
         }
 
         ul {
-            margin-left: 30px;
-            margin-bottom: 20px;
+            margin-left: 24px;
+            margin-bottom: 16px;
         }
 
+        li {
+            margin-bottom: 6px;
+        }
+
+        li strong {
+            color: #ffffff;
+        }
+
+        /* Highlight Boxes */
         .highlight {
-            background: #f0f4ff;
-            padding: 20px;
-            border-left: 4px solid #667eea;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 20px 24px;
+            border-left: 3px solid rgba(255, 255, 255, 0.5);
             margin: 20px 0;
-            border-radius: 4px;
+            border-radius: 0 12px 12px 0;
+            backdrop-filter: blur(10px);
         }
 
+        .highlight p {
+            margin-bottom: 10px;
+        }
+
+        .highlight p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Privacy Controls Section */
         .actions {
-            margin-top: 40px;
-            padding-top: 30px;
-            border-top: 2px solid #f0f0f0;
+            margin-top: 36px;
+            padding-top: 28px;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .actions h2 {
+            margin-top: 0;
+        }
+
+        .btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 16px;
         }
 
         .action-btn {
             display: inline-flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             padding: 12px 24px;
-            margin: 10px 10px 10px 0;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            font-family: inherit;
+        }
+
+        .action-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .action-btn:hover::before {
+            left: 100%;
+        }
+
+        .action-btn .material-icons {
+            font-size: 20px;
         }
 
         .btn-primary {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.35);
         }
 
         .btn-primary:hover {
-            background: #5568d3;
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
         }
 
         .btn-warning {
-            background: #fbbf24;
-            color: #78350f;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
         }
 
         .btn-warning:hover {
-            background: #f59e0b;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
         }
 
         .btn-danger {
-            background: #ef4444;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
             color: white;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
         }
 
         .btn-danger:hover {
-            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
         }
 
-        @media (max-width: 768px) {
+        .action-btn:active {
+            transform: translateY(-1px);
+        }
+
+        /* Divider */
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            margin: 8px 0;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 640px) {
+            body {
+                padding: 16px 12px;
+            }
+
             .container {
-                padding: 20px;
+                padding: 24px 18px;
+                border-radius: 18px;
+                max-height: calc(100vh - 32px);
             }
 
             h1 {
-                font-size: 24px;
+                font-size: 26px;
             }
 
             h2 {
-                font-size: 20px;
+                font-size: 18px;
+            }
+
+            .blob {
+                filter: blur(80px);
+            }
+
+            .blob-1,
+            .blob-2,
+            .blob-3,
+            .blob-4 {
+                width: 350px;
+                height: 350px;
+            }
+
+            .btn-row {
+                flex-direction: column;
             }
 
             .action-btn {
@@ -135,90 +404,161 @@
         }
     </style>
 </head>
+
 <body>
+    <!-- Animated Background -->
+    <div class="background"></div>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+    <div class="blob blob-4"></div>
+
     <div class="container">
-        <h1>🔒 Privacy Policy<br><sub style="font-size: 16px; font-weight: 300;">by Mohmad Althaf Ali</sub></h1>
-        <p class="last-updated">Last Updated: January 3, 2026</p>
+        <a href="/" class="back-btn">
+            <span class="material-icons">arrow_back</span>
+            Back to Home
+        </a>
 
-        <h2>What Data We Collect</h2>
-        <ul>
-            <li><strong>Account Information:</strong> Email, name (for authentication)</li>
-            <li><strong>Device Information:</strong> Device name, type, model, browser fingerprint</li>
-            <li><strong>Location Data:</strong> Real-time GPS coordinates, accuracy, speed (only from registered devices)</li>
-            <li><strong>Battery Status:</strong> Battery level and charging status (if available)</li>
-            <li><strong>Connection Type:</strong> WiFi, cellular network type (if available)</li>
-        </ul>
+        <h1>🔒 Privacy Policy</h1>
+        <p class="last-updated">Last Updated: February 14, 2026</p>
 
-        <h2>How We Use Your Data</h2>
-        <ul>
-            <li>Display your registered devices on a real-time map</li>
-            <li>Track location history for your devices</li>
-            <li>Provide device status information (battery, connection)</li>
-            <li>Enable location sharing via secure links</li>
-        </ul>
-
-        <h2>Data Security</h2>
+        <h2><span class="material-icons">info</span> About This App</h2>
+        <p>Realtime Device Tracker is a personal device tracking application designed to help you locate your registered
+            devices in real-time. If you lose your device, you can log in from any browser using your <strong>email and
+                password</strong> to view its last known location on a map.</p>
         <div class="highlight">
-            <p><strong>🔐 End-to-End Encryption:</strong> Your location data is encrypted using AES-256-GCM encryption before transmission. Encryption keys are stored only in your browser.</p>
-            <p><strong>🔒 HTTPS:</strong> All data transmission uses SSL/TLS encryption.</p>
-            <p><strong>🛡️ Database Security:</strong> Data is stored in MongoDB Atlas with authentication and access controls.</p>
+            <p>🔑 <strong>Email & Password Authentication Only.</strong> This app uses email and password login — no
+                Google or third-party social login is used. This means you can log in from any device using only your
+                credentials, without needing access to a specific Google account.</p>
         </div>
 
-        <h2>Your Privacy Rights</h2>
+        <div class="section-divider"></div>
+
+        <h2><span class="material-icons">storage</span> What Data We Collect</h2>
         <ul>
-            <li><strong>Access:</strong> You can view all your registered devices and their locations</li>
-            <li><strong>Delete Location History:</strong> Clear all historical location data anytime</li>
-            <li><strong>Delete Account:</strong> Permanently remove your account and all associated data</li>
-            <li><strong>Unregister Devices:</strong> Remove individual devices from tracking</li>
+            <li><strong>Account Information:</strong> Your email address and hashed password (for authentication). We
+                never store your password in plain text.</li>
+            <li><strong>Device Information:</strong> Device name, type, model, and a unique device fingerprint to
+                identify your registered devices.</li>
+            <li><strong>Location Data:</strong> Real-time GPS coordinates, accuracy, and speed — collected <strong>only
+                    from devices registered on the Android app</strong>, not from the web browser.</li>
+            <li><strong>Battery & Connection:</strong> Battery level, charging status, and network type (WiFi/cellular),
+                if available on your device.</li>
         </ul>
 
-        <h2>Data Retention</h2>
-        <p><strong>Automatic Deletion:</strong> Location data older than 30 days is automatically deleted from our servers.</p>
-        <p>You can manually clear your location history or delete your account at any time using the controls below.</p>
+        <div class="section-divider"></div>
 
-        <h2>Third-Party Services</h2>
+        <h2><span class="material-icons">track_changes</span> How It Works</h2>
         <ul>
-            <li><strong>OpenStreetMap:</strong> For map display (no personal data shared)</li>
-            <li><strong>Render.com:</strong> Application hosting provider</li>
-            <li><strong>MongoDB Atlas:</strong> Database hosting (encrypted storage)</li>
-            <li><strong>SendGrid:</strong> For password reset emails</li>
+            <li><strong>Register your device</strong> using the Android app. The app runs a background service that
+                periodically sends your device's location to the server.</li>
+            <li><strong>View from anywhere:</strong> Log in to the web dashboard at <em>devicetracker.tech</em> using
+                your email and password from any browser — on a friend's phone, a library computer, or any other device.
+            </li>
+            <li><strong>Real-time tracking:</strong> If your registered device is online, its location updates in
+                real-time on the map. If it's offline, the last known location is displayed.</li>
+            <li><strong>No Google account needed:</strong> Since authentication is email-based, you don't need access to
+                any specific account on the device you're viewing from.</li>
         </ul>
 
-        <h2>Admin Access</h2>
-        <p>The admin dashboard has access to view all users' device locations for system monitoring purposes. All admin access is logged with timestamps and IP addresses.</p>
+        <div class="section-divider"></div>
+
+        <h2><span class="material-icons">visibility</span> How We Use Your Data</h2>
+        <ul>
+            <li>Display your registered devices and their locations on a secure, real-time map.</li>
+            <li>Show device status (online/offline, battery level, last seen time).</li>
+            <li>Allow you to copy coordinates to paste into Google Maps for precise navigation.</li>
+            <li>Send password reset emails when requested.</li>
+        </ul>
+        <p>We do <strong>not</strong> sell, share, or provide your data to any third party for advertising or marketing
+            purposes.</p>
+
+        <div class="section-divider"></div>
+
+        <h2><span class="material-icons">security</span> Data Security</h2>
+        <div class="highlight">
+            <p>🔐 <strong>End-to-End Encryption:</strong> Location data is encrypted using AES-256-GCM before
+                transmission. Encryption keys are generated per-user and stored only in your browser.</p>
+            <p>🔒 <strong>HTTPS Everywhere:</strong> All communication between the app, your browser, and the server
+                uses SSL/TLS encryption.</p>
+            <p>🛡️ <strong>Secure Storage:</strong> Data is stored in MongoDB Atlas with authentication, access
+                controls, and encrypted connections.</p>
+            <p>🔑 <strong>JWT Authentication:</strong> Mobile app sessions use signed JSON Web Tokens with automatic
+                refresh, ensuring secure and persistent login without storing raw passwords on-device.</p>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <h2><span class="material-icons">gavel</span> Your Privacy Rights</h2>
+        <ul>
+            <li><strong>Access:</strong> View all your registered devices and their location data at any time.</li>
+            <li><strong>Delete Location History:</strong> Clear all stored location data while keeping your devices
+                registered.</li>
+            <li><strong>Unregister Devices:</strong> Remove individual devices from tracking via the web dashboard.</li>
+            <li><strong>Delete Account:</strong> Permanently remove your account, all devices, and all associated data.
+            </li>
+            <li><strong>Control Tracking:</strong> Stop location tracking at any time by logging out of the Android app
+                or uninstalling it.</li>
+        </ul>
+
+        <div class="section-divider"></div>
+
+        <h2><span class="material-icons">schedule</span> Data Retention</h2>
+        <p><strong>Automatic Cleanup:</strong> Location data older than 30 days is automatically deleted from our
+            servers. You can also manually clear your location history at any time using the controls below.</p>
+        <p>If you delete your account, all data is permanently and irreversibly removed from our servers.</p>
+
+        <div class="section-divider"></div>
+
+        <h2><span class="material-icons">dns</span> Third-Party Services</h2>
+        <ul>
+            <li><strong>OpenStreetMap & CARTO:</strong> Map tiles for displaying the map (no personal data is shared
+                with them).</li>
+            <li><strong>Render.com:</strong> Application hosting — the server runs on Render's platform.</li>
+            <li><strong>MongoDB Atlas:</strong> Secure cloud database for storing encrypted location and account data.
+            </li>
+            <li><strong>SendGrid:</strong> Used only for sending password reset emails when you request one.</li>
+        </ul>
+
+        <div class="section-divider"></div>
+
+        <h2><span class="material-icons">admin_panel_settings</span> Admin Access</h2>
+        <p>An admin dashboard exists for system monitoring purposes. Admin access allows viewing device locations to
+            ensure the system is functioning correctly. All admin access is password-protected and logged.</p>
 
         <div class="actions">
-            <h2>Privacy Controls</h2>
-            
-            <button class="action-btn btn-primary" onclick="window.location.href='/tracker'">
-                <span class="material-icons">home</span>
-                <span>Return to Tracker</span>
-            </button>
+            <h2><span class="material-icons">tune</span> Privacy Controls</h2>
+            <p>Take control of your data using the buttons below:</p>
 
-            <button class="action-btn btn-warning" onclick="clearLocationHistory()">
-                <span class="material-icons">delete_sweep</span>
-                <span>Clear Location History</span>
-            </button>
+            <div class="btn-row">
+                <button class="action-btn btn-primary" onclick="window.location.href='/tracker'">
+                    <span class="material-icons">home</span>
+                    <span>Return to Tracker</span>
+                </button>
 
-            <button class="action-btn btn-danger" onclick="deleteAccount()">
-                <span class="material-icons">delete_forever</span>
-                <span>Delete My Account</span>
-            </button>
+                <button class="action-btn btn-warning" onclick="clearLocationHistory()">
+                    <span class="material-icons">delete_sweep</span>
+                    <span>Clear Location History</span>
+                </button>
+
+                <button class="action-btn btn-danger" onclick="deleteAccount()">
+                    <span class="material-icons">delete_forever</span>
+                    <span>Delete My Account</span>
+                </button>
+            </div>
         </div>
     </div>
 
     <script>
         async function clearLocationHistory() {
-            if (!confirm('Are you sure you want to clear all your location history?\n\nThis will remove all historical location data from your registered devices. Your devices will remain registered.')) {
+            if (!confirm('Are you sure you want to clear all your location history?\n\nThis will remove all historical location data from your registered devices.\nYour devices will remain registered and continue tracking.')) {
                 return;
             }
 
             try {
                 const response = await fetch('/api/clear-location-history', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                    headers: { 'Content-Type': 'application/json' }
                 });
 
                 const data = await response.json();
@@ -234,20 +574,18 @@
         }
 
         async function deleteAccount() {
-            if (!confirm('⚠️ WARNING: Delete Account\n\nThis will permanently delete:\n• Your account\n• All registered devices\n• All location history\n• All settings\n\nThis action CANNOT be undone!\n\nAre you absolutely sure?')) {
+            if (!confirm('⚠️ WARNING: Delete Account\n\nThis will permanently delete:\n• Your account and login credentials\n• All registered devices\n• All location history\n• All settings\n\nThis action CANNOT be undone!\n\nAre you absolutely sure?')) {
                 return;
             }
 
-            if (!confirm('This is your last chance. Delete your account permanently?')) {
+            if (!confirm('This is your last chance.\nDelete your account permanently?')) {
                 return;
             }
 
             try {
                 const response = await fetch('/api/delete-account', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                    headers: { 'Content-Type': 'application/json' }
                 });
 
                 const data = await response.json();
@@ -264,4 +602,5 @@
         }
     </script>
 </body>
+
 </html>
