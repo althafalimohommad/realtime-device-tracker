@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -29,18 +30,32 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(-45deg, #667eea, #764ba2, #e90e0e, #4facfe, #fe0011, #a18cd1);
+            background: linear-gradient(-45deg, #0e194a, #270e40, #1f0a4f, #042b4e, #042859, #2d1b59);
             background-size: 400% 400%;
             animation: gradientShift 29s ease infinite;
             z-index: -2;
         }
 
         @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            25% { background-position: 100% 50%; }
-            50% { background-position: 100% 100%; }
-            75% { background-position: 0% 100%; }
-            100% { background-position: 0% 50%; }
+            0% {
+                background-position: 0% 50%;
+            }
+
+            25% {
+                background-position: 100% 50%;
+            }
+
+            50% {
+                background-position: 100% 100%;
+            }
+
+            75% {
+                background-position: 0% 100%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
         }
 
         /* Floating Blur Blobs - Smooth Animation */
@@ -74,7 +89,7 @@
         .blob-3 {
             width: 500px;
             height: 500px;
-            background: linear-gradient(135deg, rgba(79, 172, 254, 0.6) 0%, rgba(254, 0, 0, 0.6) 100%);
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.6) 0%, rgba(13, 13, 97, 0.6) 100%);
             top: 40%;
             left: 60%;
             animation-delay: -16s;
@@ -90,18 +105,24 @@
         }
 
         @keyframes floatSmooth {
-            0%, 100% {
+
+            0%,
+            100% {
                 transform: translate(0, 0) scale(1) rotate(0deg);
             }
+
             20% {
                 transform: translate(80px, -60px) scale(1.1) rotate(5deg);
             }
+
             40% {
                 transform: translate(-50px, 40px) scale(0.95) rotate(-3deg);
             }
+
             60% {
                 transform: translate(60px, 30px) scale(1.05) rotate(3deg);
             }
+
             80% {
                 transform: translate(-40px, -50px) scale(1) rotate(-5deg);
             }
@@ -114,7 +135,7 @@
             -webkit-backdrop-filter: blur(20px);
             border-radius: 24px;
             padding: 40px 50px;
-            box-shadow: 
+            box-shadow:
                 0 8px 32px rgba(0, 0, 0, 0.1),
                 inset 0 0 0 1px rgba(255, 255, 255, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.25);
@@ -246,7 +267,7 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
             transition: left 0.5s;
         }
 
@@ -256,7 +277,7 @@
 
         .login-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+            box-shadow: 0 10px 30px rgba(51, 74, 173, 0.5);
         }
 
         .login-btn:active {
@@ -297,7 +318,10 @@
                 filter: blur(80px);
             }
 
-            .blob-1, .blob-2, .blob-3, .blob-4 {
+            .blob-1,
+            .blob-2,
+            .blob-3,
+            .blob-4 {
                 width: 350px;
                 height: 350px;
             }
@@ -320,8 +344,8 @@
             position: absolute;
             border-radius: 50%;
             pointer-events: none;
-            background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,255,255,0.95) 30%, rgba(255,255,255,0.6) 50%, transparent 70%);
-            box-shadow: 0 0 4px rgb(15, 197, 238), 0 0 8px rgba(255,255,255,0.5);
+            background: radial-gradient(circle, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.95) 30%, rgba(255, 255, 255, 0.6) 50%, transparent 70%);
+            box-shadow: 0 0 4px rgb(15, 197, 238), 0 0 8px rgba(255, 255, 255, 0.5);
             filter: blur(0.3px);
             animation: particleFade 1.5s ease-out forwards;
         }
@@ -331,6 +355,7 @@
                 opacity: 1;
                 transform: scale(1) translate(0, 0);
             }
+
             100% {
                 opacity: 0;
                 transform: scale(0.3) translate(var(--tx), var(--ty));
@@ -343,7 +368,7 @@
             height: 100px;
             border-radius: 50%;
             pointer-events: none;
-            background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.15) 30%, transparent 70%);
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.15) 30%, transparent 70%);
             transform: translate(-50%, -50%);
             opacity: 0;
             transition: opacity 0.3s ease;
@@ -364,11 +389,12 @@
         .button-wrapper .cursor-glow {
             width: 120px;
             height: 120px;
-            background: radial-gradient(circle, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.2) 30%, transparent 70%);
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.2) 30%, transparent 70%);
             z-index: 3;
         }
     </style>
 </head>
+
 <body>
     <!-- Animated Background -->
     <div class="background"></div>
@@ -379,10 +405,10 @@
 
     <div class="login-container">
         <img src="/logo.png" alt="Device Tracker" class="logo">
-        
+
         <h1>Welcome Back</h1>
         <p class="subtitle">Track and locate your devices in real-time</p>
-        
+
         <div id="errorMessage" class="error-message"></div>
         <div id="successMessage" class="success-message"></div>
 
@@ -392,20 +418,26 @@
                 <div class="input-wrapper">
                     <div class="particle-container"></div>
                     <div class="cursor-glow"></div>
-                    <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                    <input type="email" id="email" name="email" placeholder="Email Address" required autocomplete="email">
+                    <input type="email" id="email" name="email" placeholder="Email Address" required
+                        autocomplete="email">
                 </div>
             </div>
             <div class="input-group">
                 <div class="input-wrapper">
                     <div class="particle-container"></div>
                     <div class="cursor-glow"></div>
-                    <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
-                    <input type="password" id="password" name="password" placeholder="Password" required autocomplete="current-password">
+                    <input type="password" id="password" name="password" placeholder="Password" required
+                        autocomplete="current-password">
                 </div>
             </div>
             <div class="button-wrapper">
@@ -423,44 +455,44 @@
     <script>
         // Glass Particle Effect - iOS 26 Style
         const inputWrappers = document.querySelectorAll('.input-wrapper, .button-wrapper');
-        
+
         inputWrappers.forEach(wrapper => {
             const particleContainer = wrapper.querySelector('.particle-container');
             const cursorGlow = wrapper.querySelector('.cursor-glow');
             let isHovering = false;
             let lastX = 0, lastY = 0;
             let particleInterval = null;
-            
+
             function createParticle(x, y) {
                 const particle = document.createElement('div');
                 particle.className = 'glass-particle';
-                
+
                 // Random size between 1-4px (smaller)
                 const size = Math.random() * 3 + 1;
                 particle.style.width = size + 'px';
                 particle.style.height = size + 'px';
-                
+
                 // Position at cursor
                 particle.style.left = x + 'px';
                 particle.style.top = y + 'px';
-                
+
                 // Random drift direction (increased range)
                 const tx = (Math.random() - 0.5) * 120;
                 const ty = (Math.random() - 0.5) * 80 - 30;
                 particle.style.setProperty('--tx', tx + 'px');
                 particle.style.setProperty('--ty', ty + 'px');
-                
+
                 // Random animation duration
                 particle.style.animationDuration = (Math.random() * 0.8 + 0.8) + 's';
-                
+
                 particleContainer.appendChild(particle);
-                
+
                 // Remove particle after animation
                 setTimeout(() => {
                     particle.remove();
                 }, 1600);
             }
-            
+
             function createParticleBurst(x, y, count = 3) {
                 for (let i = 0; i < count; i++) {
                     const offsetX = (Math.random() - 0.5) * 50;
@@ -468,11 +500,11 @@
                     createParticle(x + offsetX, y + offsetY);
                 }
             }
-            
+
             wrapper.addEventListener('mouseenter', () => {
                 isHovering = true;
             });
-            
+
             wrapper.addEventListener('mouseleave', () => {
                 isHovering = false;
                 cursorGlow.style.opacity = '0';
@@ -481,31 +513,31 @@
                     particleInterval = null;
                 }
             });
-            
+
             wrapper.addEventListener('mousemove', (e) => {
                 if (!isHovering) return;
-                
+
                 const rect = wrapper.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
-                
+
                 // Update cursor glow position
                 cursorGlow.style.left = x + 'px';
                 cursorGlow.style.top = y + 'px';
                 cursorGlow.style.opacity = '1';
-                
+
                 // Calculate movement distance
                 const dx = x - lastX;
                 const dy = y - lastY;
                 const distance = Math.sqrt(dx * dx + dy * dy);
-                
+
                 // Create particles based on movement
                 if (distance > 5) {
                     createParticleBurst(x, y, Math.min(Math.floor(distance / 5), 6));
                     lastX = x;
                     lastY = y;
                 }
-                
+
                 // Continuous particle emission while hovering
                 if (!particleInterval) {
                     particleInterval = setInterval(() => {
@@ -524,18 +556,18 @@
 
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            
+
             // Hide previous messages
             errorMessage.style.display = 'none';
             successMessage.style.display = 'none';
-            
+
             // Disable button and show loading
             loginBtn.disabled = true;
             loginBtn.textContent = 'Signing in...';
-            
+
             try {
                 const response = await fetch('/login', {
                     method: 'POST',
@@ -545,9 +577,9 @@
                     credentials: 'include',
                     body: JSON.stringify({ email, password })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok && data.success) {
                     successMessage.textContent = 'Login successful! Redirecting...';
                     successMessage.style.display = 'block';
@@ -568,4 +600,5 @@
         });
     </script>
 </body>
+
 </html>
