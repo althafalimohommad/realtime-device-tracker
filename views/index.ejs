@@ -2,105 +2,113 @@
 <html lang="en">
 
 <head>
-   <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-   <title>Realtime Device Tracker - by Althaf</title>
-   <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" 
-    integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" 
-    crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Realtime Device Tracker</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
+        integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 
 <body>
-   <!-- Top Navigation Header -->
-   <div class="top-nav">
-       <div class="nav-left">
-           <div style="display: flex; flex-direction: column; align-items: flex-start;">
-               <h1 class="app-title" style="margin: 0; font-size: 20px; font-weight: 500;">Realtime Device Tracker</h1>
-               <span class="app-domain" style="font-size: 12px; color: #5f6368; margin-top: 2px;">by Mohmad Althaf Ali</span>
-           </div>
-       </div>
-       <div class="nav-right">
-           <button class="icon-btn" title="Help">
-               <i class="material-icons">help</i>
-           </button>
-           <div class="user-menu-container">
-               <img src="<%= user.photo %>" alt="<%= user.name %>" class="user-avatar" id="userAvatar" style="cursor: pointer;">
-               <div class="user-menu" id="userMenu">
-                   <div class="user-menu-header">
-                       <img src="<%= user.photo %>" alt="<%= user.name %>" class="user-menu-avatar">
-                       <div class="user-menu-info">
-                           <div class="user-menu-name"><%= user.name %></div>
-                           <div class="user-menu-email"><%= user.email %></div>
-                       </div>
-                   </div>
-                   <div class="user-menu-divider"></div>
-                   <a href="/logout" class="user-menu-item">
-                       <i class="material-icons">logout</i>
-                       <span>Logout</span>
-                   </a>
-               </div>
-           </div>
-       </div>
-   </div>
+    <!-- Top Navigation Header -->
+    <div class="top-nav">
+        <div class="nav-left">
+            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                <h1 class="app-title" style="margin: 0; font-size: 20px; font-weight: 500;">Realtime Device Tracker</h1>
+                <span class="app-domain" style="font-size: 12px; color: #5f6368; margin-top: 2px;">by Mohmad Althaf
+                    Ali</span>
+            </div>
+        </div>
+        <div class="nav-right">
+            <button class="icon-btn" title="Help">
+                <i class="material-icons">help</i>
+            </button>
+            <div class="user-menu-container">
+                <img src="<%= user.photo %>" alt="<%= user.name %>" class="user-avatar" id="userAvatar"
+                    style="cursor: pointer;">
+                <div class="user-menu" id="userMenu">
+                    <div class="user-menu-header">
+                        <img src="<%= user.photo %>" alt="<%= user.name %>" class="user-menu-avatar">
+                        <div class="user-menu-info">
+                            <div class="user-menu-name">
+                                <%= user.name %>
+                            </div>
+                            <div class="user-menu-email">
+                                <%= user.email %>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="user-menu-divider"></div>
+                    <a href="/logout" class="user-menu-item">
+                        <i class="material-icons">logout</i>
+                        <span>Logout</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 
-   <!-- Device Sidebar Panel -->
-   <div id="device-sidebar" class="device-panel">
-       <div class="panel-header">
-           <button class="icon-btn refresh-btn" onclick="refreshDevices()" title="Refresh">
-               <i class="material-icons">refresh</i>
-           </button>
-           <a href="/" class="icon-btn" title="Home">
-               <i class="material-icons">home</i>
-           </a>
-       </div>
+    <!-- Device Sidebar Panel -->
+    <div id="device-sidebar" class="device-panel">
+        <div class="panel-header">
+            <button class="icon-btn refresh-btn" onclick="refreshDevices()" title="Refresh">
+                <i class="material-icons">refresh</i>
+            </button>
+            <a href="/" class="icon-btn" title="Home">
+                <i class="material-icons">home</i>
+            </a>
+        </div>
 
-       <div id="device-details" class="device-details">
-           <!-- Selected device details will be shown here -->
-           <div class="no-device-selected">
-               <i class="material-icons">devices</i>
-               <p>Select a device to view details</p>
-           </div>
-       </div>
+        <div id="device-details" class="device-details">
+            <!-- Selected device details will be shown here -->
+            <div class="no-device-selected">
+                <i class="material-icons">devices</i>
+                <p>Select a device to view details</p>
+            </div>
+        </div>
 
-       <div class="sidebar-header">
-           <button class="icon-btn devices-tab active" onclick="showDevicesTab()">
-               <i class="material-icons">devices</i>
-               <span>Devices</span>
-           </button>
-           <button class="icon-btn people-tab" onclick="showPeopleTab()">
-               <i class="material-icons">people</i>
-               <span>People</span>
-           </button>
-       </div>
+        <div class="sidebar-header">
+            <button class="icon-btn devices-tab active" onclick="showDevicesTab()">
+                <i class="material-icons">devices</i>
+                <span>Devices</span>
+            </button>
+            <button class="icon-btn people-tab" onclick="showPeopleTab()">
+                <i class="material-icons">people</i>
+                <span>People</span>
+            </button>
+        </div>
 
-       <div id="device-list" class="device-list">
-           <!-- Devices will be populated here -->
-       </div>
-   </div>
+        <div id="device-list" class="device-list">
+            <!-- Devices will be populated here -->
+        </div>
+    </div>
 
-   <!-- Map Container -->
-   <div id="map"></div>
+    <!-- Map Container -->
+    <div id="map"></div>
 
-   <!-- Map Controls -->
-   <div class="map-controls">
-       <button class="map-type-btn active" data-type="map">Map</button>
-       <button class="map-type-btn" data-type="satellite">Satellite</button>
-   </div>
+    <!-- Map Controls -->
+    <div class="map-controls">
+        <button class="map-type-btn active" data-type="map">Map</button>
+        <button class="map-type-btn" data-type="satellite">Satellite</button>
+    </div>
 
-   <!-- Location Permission Modal REMOVED - Web viewer doesn't track browser location -->
+    <!-- Location Permission Modal REMOVED - Web viewer doesn't track browser location -->
 
-   <!-- Scripts -->
+    <!-- Scripts -->
     <script src="/js/encryption.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" 
-    integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" 
-    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"
+        integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js" 
-    integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+" 
-    crossorigin="anonymous"></script>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"
+        integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+"
+        crossorigin="anonymous"></script>
 
     <script src="/js/script.js"></script>
 </body>
