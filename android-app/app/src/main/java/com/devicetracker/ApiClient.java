@@ -21,15 +21,14 @@ import okhttp3.Response;
 public class ApiClient {
 
     private static final String TAG = "ApiClient";
-    private static final String BASE_URL =
-            "https://devicetracker.tech";
-    
+    private static final String BASE_URL = "https://realtime-device-tracker-s9ua.onrender.com";
+
     // Token valid for 7 days
     public static final long TOKEN_VALIDITY_MS = 7L * 24 * 60 * 60 * 1000; // 7 days
-    
-    // Refresh token when less than 2 days remain (start refreshing on day 5)
+
+    // Refresh token when less than 3 days remain (start refreshing on day 4)
     // This gives a bigger window to handle battery optimization delays
-    public static final long TOKEN_REFRESH_THRESHOLD_MS = 48 * 60 * 60 * 1000L; // 2 days in ms
+    public static final long TOKEN_REFRESH_THRESHOLD_MS = 3L * 24 * 60 * 60 * 1000; // 3 days in ms
 
     private final OkHttpClient client;
     private final SharedPreferences prefs;
@@ -39,11 +38,13 @@ public class ApiClient {
 
     public interface ApiCallback {
         void onSuccess(String response);
+
         void onError(String error);
     }
-    
+
     public interface TokenRefreshCallback {
         void onRefreshed(String newToken);
+
         void onFailed(String error);
     }
 
@@ -57,8 +58,7 @@ public class ApiClient {
         Context appContext = context.getApplicationContext();
         this.context = appContext;
         this.prefs = appContext.getSharedPreferences("DeviceTracker", Context.MODE_PRIVATE);
-        this.userAgent =
-                Build.MANUFACTURER + " " + Build.MODEL + " Android " + Build.VERSION.RELEASE;
+        this.userAgent = Build.MANUFACTURER + " " + Build.MODEL + " Android " + Build.VERSION.RELEASE;
     }
 
     // ===============================
@@ -69,8 +69,7 @@ public class ApiClient {
             double latitude,
             double longitude,
             float accuracy,
-            ApiCallback callback
-    ) {
+            ApiCallback callback) {
         try {
             String jwt = prefs.getString("jwt", null);
             String userId = prefs.getString("userId", null);
@@ -78,7 +77,7 @@ public class ApiClient {
             String fingerprint = prefs.getString("deviceFingerprint", "");
 
             // Debug logging
-            Log.d(TAG, "Reading JWT from prefs: " + 
+            Log.d(TAG, "Reading JWT from prefs: " +
                     (jwt != null ? jwt.substring(0, Math.min(50, jwt.length())) + "..." : "NULL"));
             Log.d(TAG, "UserId from prefs: " + userId);
 
@@ -91,7 +90,7 @@ public class ApiClient {
             // Validate JWT format (must have 3 parts separated by dots)
             String[] jwtParts = jwt.split("\\.");
             Log.d(TAG, "JWT parts count: " + jwtParts.length);
-            
+
             if (!jwt.contains(".") || jwtParts.length != 3) {
                 Log.e(TAG, "Invalid JWT format (parts=" + jwtParts.length + ") - clearing auth data");
                 Log.e(TAG, "Invalid token value: " + jwt);
@@ -115,8 +114,7 @@ public class ApiClient {
 
             RequestBody body = RequestBody.create(
                     json.toString(),
-                    MediaType.get("application/json; charset=utf-8")
-            );
+                    MediaType.get("application/json; charset=utf-8"));
 
             Request request = new Request.Builder()
                     .url(BASE_URL + "/api/location-update-app")
@@ -166,11 +164,11 @@ public class ApiClient {
             callback.onError("Unexpected error");
         }
     }
-    
+
     // ===============================
     // TOKEN REFRESH
     // ===============================
-    
+
     /**
      * Check if token needs refresh (less than 1 day remaining)
      * Token is valid for 7 days, refresh on day 6 (when < 24 hours remain)
@@ -178,40 +176,41 @@ public class ApiClient {
     public boolean shouldRefreshToken() {
         long tokenExpiry = prefs.getLong("tokenExpiry", 0);
         long loginTimestamp = prefs.getLong("loginTimestamp", 0);
-        
+
         // If no expiry stored but we have login timestamp, calculate it
         if (tokenExpiry == 0 && loginTimestamp > 0) {
             tokenExpiry = loginTimestamp + TOKEN_VALIDITY_MS;
             prefs.edit().putLong("tokenExpiry", tokenExpiry).apply();
         }
-        
-        if (tokenExpiry == 0) return false;
-        
+
+        if (tokenExpiry == 0)
+            return false;
+
         long now = System.currentTimeMillis();
         long timeRemaining = tokenExpiry - now;
         boolean shouldRefresh = timeRemaining > 0 && timeRemaining < TOKEN_REFRESH_THRESHOLD_MS;
-        
+
         if (shouldRefresh) {
             Log.d(TAG, "Token expires in " + (timeRemaining / 3600000) + " hours - needs refresh");
         }
         return shouldRefresh;
     }
-    
+
     /**
      * Check if token is expired
      */
     public boolean isTokenExpired() {
         long tokenExpiry = prefs.getLong("tokenExpiry", 0);
         long loginTimestamp = prefs.getLong("loginTimestamp", 0);
-        
+
         // If no expiry but we have login timestamp, calculate it
         if (tokenExpiry == 0 && loginTimestamp > 0) {
             tokenExpiry = loginTimestamp + TOKEN_VALIDITY_MS;
         }
-        
+
         return tokenExpiry > 0 && System.currentTimeMillis() >= tokenExpiry;
     }
-    
+
     /**
      * Get token status info for debugging
      */
@@ -220,17 +219,18 @@ public class ApiClient {
         long loginTimestamp = prefs.getLong("loginTimestamp", 0);
         long lastRefresh = prefs.getLong("lastTokenRefresh", 0);
         long now = System.currentTimeMillis();
-        
-        if (tokenExpiry == 0) return "No token expiry set";
-        
+
+        if (tokenExpiry == 0)
+            return "No token expiry set";
+
         long hoursRemaining = (tokenExpiry - now) / (60 * 60 * 1000);
         long daysSinceLogin = loginTimestamp > 0 ? (now - loginTimestamp) / (24 * 60 * 60 * 1000) : -1;
         long hoursSinceRefresh = lastRefresh > 0 ? (now - lastRefresh) / (60 * 60 * 1000) : -1;
-        
+
         return String.format("Hours remaining: %d, Days since login: %d, Hours since refresh: %d",
                 hoursRemaining, daysSinceLogin, hoursSinceRefresh);
     }
-    
+
     /**
      * Refresh the JWT token before it expires
      */
@@ -239,23 +239,23 @@ public class ApiClient {
             Log.d(TAG, "Token refresh already in progress");
             return;
         }
-        
+
         String jwt = prefs.getString("jwt", null);
         if (jwt == null) {
             callback.onFailed("No token to refresh");
             return;
         }
-        
+
         isRefreshingToken = true;
         Log.d(TAG, "Refreshing token...");
-        
+
         Request request = new Request.Builder()
                 .url(BASE_URL + "/api/refresh-token")
                 .addHeader("Authorization", "Bearer " + jwt)
                 .addHeader("User-Agent", userAgent)
                 .post(RequestBody.create("", MediaType.get("application/json")))
                 .build();
-        
+
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
@@ -263,20 +263,20 @@ public class ApiClient {
                 Log.e(TAG, "Token refresh network error", e);
                 callback.onFailed("Network error during token refresh");
             }
-            
+
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 isRefreshingToken = false;
                 String resBody = response.body() != null ? response.body().string() : "";
-                
+
                 if (response.isSuccessful()) {
                     try {
                         JSONObject json = new JSONObject(resBody);
                         if (json.optBoolean("success", false)) {
                             String newToken = json.getString("token");
-                            long newExpiry = json.optLong("tokenExpiry", 
+                            long newExpiry = json.optLong("tokenExpiry",
                                     System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000);
-                            
+
                             // Save new token with updated timestamps
                             long now = System.currentTimeMillis();
                             prefs.edit()
@@ -284,8 +284,8 @@ public class ApiClient {
                                     .putLong("tokenExpiry", newExpiry)
                                     .putLong("lastTokenRefresh", now)
                                     .apply();
-                            
-                            Log.d(TAG, "✅ Token refreshed successfully, valid until: " + 
+
+                            Log.d(TAG, "✅ Token refreshed successfully, valid until: " +
                                     new java.util.Date(newExpiry));
                             callback.onRefreshed(newToken);
                         } else {

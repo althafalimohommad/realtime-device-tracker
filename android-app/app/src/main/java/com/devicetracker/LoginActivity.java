@@ -32,8 +32,7 @@ public class LoginActivity extends AppCompatActivity {
     private static final String TAG = "LoginActivity";
 
     private static final String PREFS_NAME = "DeviceTracker";
-    private static final String SERVER_URL =
-            "https://realtime-device-tracker-s9ua.onrender.com";
+    private static final String SERVER_URL = "https://realtime-device-tracker-s9ua.onrender.com";
 
     private OkHttpClient httpClient;
 
@@ -41,7 +40,7 @@ public class LoginActivity extends AppCompatActivity {
     private Button btnLogin;
     private TextView tvRegister, tvStatus, tvForgotPassword;
     private ProgressBar progressBar;
-    
+
     // Track wrong password attempts
     private int wrongPasswordAttempts = 0;
 
@@ -58,20 +57,20 @@ public class LoginActivity extends AppCompatActivity {
         // 🔐 If already logged in, check token validity
         String jwt = prefs.getString("jwt", null);
         String userId = prefs.getString("userId", null);
-        
+
         if (jwt != null && userId != null) {
             // Check if token is expired or about to expire
             long tokenExpiry = prefs.getLong("tokenExpiry", 0);
             long now = System.currentTimeMillis();
             long hoursRemaining = (tokenExpiry - now) / (60 * 60 * 1000);
-            
+
             if (tokenExpiry > 0 && now >= tokenExpiry) {
                 // Token expired - try to refresh before forcing re-login
                 Log.d(TAG, "Token expired, attempting refresh...");
                 tryRefreshExpiredToken(prefs);
                 return;
-            } else if (tokenExpiry > 0 && hoursRemaining < 48) {
-                // Token expiring soon - schedule refresh and continue
+            } else if (tokenExpiry > 0 && hoursRemaining < 72) {
+                // Token expiring within 3 days - schedule refresh and continue
                 Log.d(TAG, "Token expiring in " + hoursRemaining + " hours, scheduling refresh");
                 TokenRefreshWorker.scheduleImmediateCheck(this);
                 navigateToMainActivity();
@@ -98,7 +97,7 @@ public class LoginActivity extends AppCompatActivity {
 
         // Email/Password Login
         btnLogin.setOnClickListener(v -> validateAndLogin());
-        
+
         // Forgot Password - hidden initially, shown after wrong password
         if (tvForgotPassword != null) {
             tvForgotPassword.setVisibility(View.GONE);
@@ -111,7 +110,7 @@ public class LoginActivity extends AppCompatActivity {
                 startActivity(intent);
             });
         }
-        
+
         // Navigate to Register
         tvRegister.setOnClickListener(v -> {
             startActivity(new Intent(LoginActivity.this, RegisterActivity.class));
@@ -121,24 +120,25 @@ public class LoginActivity extends AppCompatActivity {
     // ===============================
     // TOKEN REFRESH (ON APP OPEN)
     // ===============================
-    
+
     /**
      * Try to refresh an expired token before forcing re-login.
      * If the server still accepts the old token, user stays logged in.
      */
     private void tryRefreshExpiredToken(SharedPreferences prefs) {
         setContentView(R.layout.activity_login);
-        
+
         // Show a loading state
         progressBar = findViewById(R.id.progressBar);
         tvStatus = findViewById(R.id.tvStatus);
-        
-        if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
+
+        if (progressBar != null)
+            progressBar.setVisibility(View.VISIBLE);
         if (tvStatus != null) {
             tvStatus.setVisibility(View.VISIBLE);
             tvStatus.setText("Reconnecting...");
         }
-        
+
         // Attempt token refresh
         ApiClient apiClient = new ApiClient(this);
         apiClient.refreshToken(new ApiClient.TokenRefreshCallback() {
@@ -151,7 +151,7 @@ public class LoginActivity extends AppCompatActivity {
                     navigateToMainActivity();
                 });
             }
-            
+
             @Override
             public void onFailed(String error) {
                 Log.w(TAG, "Token refresh failed: " + error);
@@ -163,22 +163,24 @@ public class LoginActivity extends AppCompatActivity {
                             .remove("loginTimestamp")
                             .remove("lastTokenRefresh")
                             .apply();
-                    
-                    if (progressBar != null) progressBar.setVisibility(View.GONE);
-                    if (tvStatus != null) tvStatus.setVisibility(View.GONE);
-                    
+
+                    if (progressBar != null)
+                        progressBar.setVisibility(View.GONE);
+                    if (tvStatus != null)
+                        tvStatus.setVisibility(View.GONE);
+
                     // Show message
                     Toast.makeText(LoginActivity.this,
                             "Session expired. Please login again.",
                             Toast.LENGTH_LONG).show();
-                    
+
                     // Reinitialize login UI
                     initializeLoginUI();
                 });
             }
         });
     }
-    
+
     /**
      * Initialize all login UI elements (called after failed token refresh)
      */
@@ -201,7 +203,7 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         btnLogin.setOnClickListener(v -> validateAndLogin());
-        
+
         if (tvForgotPassword != null) {
             tvForgotPassword.setVisibility(View.GONE);
             tvForgotPassword.setOnClickListener(v -> {
@@ -213,7 +215,7 @@ public class LoginActivity extends AppCompatActivity {
                 startActivity(intent);
             });
         }
-        
+
         tvRegister.setOnClickListener(v -> {
             startActivity(new Intent(LoginActivity.this, RegisterActivity.class));
         });
@@ -260,8 +262,7 @@ public class LoginActivity extends AppCompatActivity {
 
             RequestBody body = RequestBody.create(
                     json.toString(),
-                    MediaType.get("application/json; charset=utf-8")
-            );
+                    MediaType.get("application/json; charset=utf-8"));
 
             Request request = new Request.Builder()
                     .url(SERVER_URL + "/api/app/login")
@@ -296,26 +297,25 @@ public class LoginActivity extends AppCompatActivity {
                                 String token = jsonResponse.getString("token");
 
                                 // Validate JWT format
-                                if (token == null || !token.contains(".") || 
-                                    token.split("\\.").length != 3) {
+                                if (token == null || !token.contains(".") ||
+                                        token.split("\\.").length != 3) {
                                     Log.e(TAG, "Invalid JWT received from server!");
                                     setLoading(false, "");
                                     showError("Invalid token from server");
                                     return;
                                 }
 
-                                SharedPreferences prefs = 
-                                        getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                                
+                                SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+
                                 // Clear old data
                                 prefs.edit().clear().apply();
-                                
+
                                 // Store current timestamp as login time
                                 long loginTimestamp = System.currentTimeMillis();
-                                
+
                                 // Calculate token expiry (7 days from login)
                                 long tokenExpiry = loginTimestamp + (7L * 24 * 60 * 60 * 1000);
-                                
+
                                 // Save new auth data with login timestamp
                                 prefs.edit()
                                         .putString("jwt", token)
@@ -330,10 +330,10 @@ public class LoginActivity extends AppCompatActivity {
 
                                 Log.d(TAG, "✅ Login successful, JWT saved");
                                 Log.d(TAG, "Token expires at: " + new java.util.Date(tokenExpiry));
-                                
+
                                 // Schedule background token refresh worker
                                 TokenRefreshWorker.schedule(LoginActivity.this);
-                                
+
                                 setLoading(false, "");
                                 Toast.makeText(LoginActivity.this,
                                         "Login successful!", Toast.LENGTH_SHORT).show();
@@ -344,16 +344,16 @@ public class LoginActivity extends AppCompatActivity {
                                 String message = jsonResponse.optString("message",
                                         "Login failed");
                                 setLoading(false, "");
-                                
+
                                 // Check if it's a wrong password error
-                                if (message.toLowerCase().contains("invalid") || 
-                                    message.toLowerCase().contains("password")) {
+                                if (message.toLowerCase().contains("invalid") ||
+                                        message.toLowerCase().contains("password")) {
                                     wrongPasswordAttempts++;
                                     if (wrongPasswordAttempts >= 1 && tvForgotPassword != null) {
                                         tvForgotPassword.setVisibility(View.VISIBLE);
                                     }
                                 }
-                                
+
                                 showError(message);
                             }
                         } catch (Exception e) {

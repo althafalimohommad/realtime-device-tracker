@@ -13,6 +13,8 @@ services:
         sync: false
       - key: SESSION_SECRET
         generateValue: true
+      - key: JWT_SECRET
+        generateValue: true
       - key: CALLBACK_URL
         value: https://realtime-device-tracker.onrender.com/auth/google/callback
       - key: NODE_ENV
