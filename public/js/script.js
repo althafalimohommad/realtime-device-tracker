@@ -396,8 +396,11 @@ if (navigator.geolocation) {
 // Initialize map
 const map = L.map("map").setView([0, 0], 2);
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "OpenStreetMap"
+// Dark theme map tiles (CartoDB Dark Matter)
+L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 20
 }).addTo(map);
 
 const markers = {};
@@ -854,11 +857,12 @@ function showDeviceDetails(deviceId) {
     
     detailsContainer.innerHTML = `
         <div class="device-header">
-            <div style="font-size: 64px;">${deviceIcon}</div>
+            <div style="font-size: 52px;">${deviceIcon}</div>
             <div class="device-info-header">
                 <h2 class="device-name">${device.name}</h2>
                 <div class="device-status">
-                    <span style="color: ${statusColor};">● ${statusText}</span> • <span>Last seen ${timeAgo}</span>
+                    <span style="color: ${statusColor};">● ${statusText}</span>
+                    <span style="margin-left: 4px;">Last seen ${timeAgo}</span>
                 </div>
                 <div class="device-meta">
                     ${device.battery !== null ? `
@@ -872,16 +876,16 @@ function showDeviceDetails(deviceId) {
             </div>
         </div>
         <div class="device-actions-panel">
-            <button class="action-btn" onclick="copyLocation('${deviceId}')" style="background: #1a73e8; color: white; width: 100%; margin-bottom: 12px;">
-                <i class="material-icons">content_copy</i>
+            <button class="action-btn" onclick="copyLocation('${deviceId}')" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; width: 100%;">
+                <i class="material-icons" style="color: white;">content_copy</i>
                 <span class="action-btn-text">Copy Location</span>
             </button>
-            <button class="action-btn" onclick="unregisterDevice('${deviceId}')" style="background: #ea4335; color: white; width: 100%;">
-                <i class="material-icons">delete</i>
+            <button class="action-btn" onclick="unregisterDevice('${deviceId}')" style="background: linear-gradient(135deg, #ea4335 0%, #d62020 100%); color: white; border: none; width: 100%;">
+                <i class="material-icons" style="color: white;">delete</i>
                 <span class="action-btn-text">Unregister Device</span>
             </button>
-            <p style="font-size: 12px; color: #5f6368; margin-top: 12px; text-align: center; padding: 0 16px;">
-                💡 Paste the copied coordinates in Google Maps to get the exact location of your device
+            <p style="font-size: 12px; color: #9aa0a6; margin-top: 12px; text-align: center; padding: 0 12px;">
+                💡 Paste the copied coordinates in Google Maps to get the exact location of your device.
             </p>
         </div>
     `;
@@ -1088,14 +1092,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     attribution: 'Esri, DigitalGlobe, GeoEye, Earthstar Geographics'
                 }).addTo(map);
             } else {
-                // Switch to map view
+                // Switch to dark map view
                 map.eachLayer(layer => {
                     if (layer instanceof L.TileLayer) {
                         map.removeLayer(layer);
                     }
                 });
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: 'OpenStreetMap'
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+                    subdomains: 'abcd',
+                    maxZoom: 20
                 }).addTo(map);
             }
         });
