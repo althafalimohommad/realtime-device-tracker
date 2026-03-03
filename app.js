@@ -15,6 +15,25 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const sgMail = require('@sendgrid/mail');
 const database = require('./database');
+const helmet = require('helmet');
+const cors = require('cors');
+const rateLimit = require('express-rate-limit');
+
+// ===============================
+// SECURITY HELPERS
+// ===============================
+function sanitizeInput(str) {
+    if (typeof str !== 'string') return '';
+    return str.replace(/[<>"'&]/g, '').trim().substring(0, 200);
+}
+
+function validatePassword(password) {
+    if (!password || password.length < 8) return 'Password must be at least 8 characters long.';
+    if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter.';
+    if (!/[a-z]/.test(password)) return 'Password must contain at least one lowercase letter.';
+    if (!/[0-9]/.test(password)) return 'Password must contain at least one number.';
+    return null;
+}
 
 // JWT Configuration
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || crypto.randomBytes(64).toString('hex');
@@ -49,7 +68,7 @@ async function sendPasswordResetEmail(email, code, userName) {
     if (!emailConfigured) {
         throw new Error('Email service is not configured. Please contact support.');
     }
-    
+
     const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
@@ -68,16 +87,16 @@ async function sendPasswordResetEmail(email, code, userName) {
             </div>
         </div>
     `;
-    
+
     console.log(`📧 Attempting to send email to: ${email}`);
-    
+
     const msg = {
         to: email,
         from: process.env.SENDGRID_FROM_EMAIL || 'noreply@devicetracker.app',
         subject: '🔐 Password Reset Code - Device Tracker',
         html: htmlContent
     };
-    
+
     const result = await sgMail.send(msg);
     console.log(`✅ Email sent successfully to: ${email}`);
     return result;
@@ -104,13 +123,13 @@ function verifyAppToken(token) {
 // Middleware to authenticate mobile app requests using JWT
 function authenticateMobileApp(req, res, next) {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ success: false, message: 'Authorization token required' });
     }
-    
+
     const token = authHeader.replace('Bearer ', '');
-    
+
     // Verify JWT token
     const jwtPayload = verifyAppToken(token);
     if (jwtPayload && jwtPayload.type === 'mobile_app') {
@@ -120,17 +139,24 @@ function authenticateMobileApp(req, res, next) {
         };
         return next();
     }
-    
+
     console.log('⚠️ Token verification failed');
-    return res.status(401).json({ 
-        success: false, 
+    return res.status(401).json({
+        success: false,
         message: 'Invalid or expired token - please re-login',
         code: 'INVALID_TOKEN'
     });
 }
 
 const server = http.createServer(app);
-const io = socketio(server);
+const io = socketio(server, {
+    cors: {
+        origin: process.env.NODE_ENV === 'production'
+            ? ['https://devicetracker.tech', 'https://www.devicetracker.tech']
+            : ['http://localhost:3000'],
+        credentials: true
+    }
+});
 
 // Store for sharing tokens (token -> {socketId, userId, expiresAt})
 const shareTokens = new Map();
@@ -145,7 +171,7 @@ let useMongoDb = false;
 // Initialize database connection
 async function initializeDatabase() {
     useMongoDb = await database.connect();
-    
+
     if (useMongoDb) {
         // Load users from MongoDB
         usersDB = await database.getAllUsers();
@@ -203,7 +229,7 @@ async function updateDeviceLocation(userId, fingerprint, locationData) {
     if (!user.registeredDevices) {
         user.registeredDevices = [];
     }
-    
+
     const device = user.registeredDevices.find(d => d.fingerprint === fingerprint);
     if (device) {
         console.log(`💾 Updating location for device: ${device.name}`);
@@ -213,7 +239,7 @@ async function updateDeviceLocation(userId, fingerprint, locationData) {
         device.lastSeen = new Date().toISOString();
         device.lastBattery = locationData.battery;
         device.lastCharging = locationData.charging;
-        
+
         await saveUser(user);
         console.log(`✅ Location saved for ${device.name}`);
     } else {
@@ -229,7 +255,7 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser(async (id, done) => {
     let user = usersDB[id];
-    
+
     // If not in cache and using MongoDB, fetch from database
     if (!user && useMongoDb) {
         user = await database.getUser(id);
@@ -237,7 +263,7 @@ passport.deserializeUser(async (id, done) => {
             usersDB[id] = user; // Cache it
         }
     }
-    
+
     done(null, user);
 });
 
@@ -246,17 +272,50 @@ app.set("view engine", "ejs");
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(session({
+// Security headers
+app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false
+}));
+
+// CORS configuration
+app.use(cors({
+    origin: process.env.NODE_ENV === 'production'
+        ? ['https://devicetracker.tech', 'https://www.devicetracker.tech']
+        : ['http://localhost:3000'],
+    credentials: true
+}));
+
+// Rate limiters
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { success: false, message: 'Too many login attempts. Please try again in 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const adminLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { error: 'Too many admin attempts. Try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+// Session middleware (extracted for Socket.IO sharing)
+const sessionMiddleware = session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { 
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    cookie: {
+        maxAge: 24 * 60 * 60 * 1000,
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax'
     }
-}));
+});
+app.use(sessionMiddleware);
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -271,31 +330,48 @@ function isAuthenticated(req, res, next) {
 // Store connected devices with user association
 const devices = new Map();
 
-io.on("connection", function(socket) {
-    console.log("Device connected:", socket.id);
-    
+// ===============================
+// SOCKET.IO AUTHENTICATION
+// ===============================
+io.use((socket, next) => {
+    sessionMiddleware(socket.request, {}, () => {
+        const userId = socket.request.session?.passport?.user;
+        if (userId) {
+            socket.userId = userId;
+            return next();
+        }
+        return next(new Error('Authentication required'));
+    });
+});
+
+io.on("connection", function (socket) {
+    console.log("Device connected:", socket.id, "(user:", socket.userId, ")");
+
     // Handle viewer connection (web browsers just viewing, not tracking)
-    socket.on("viewer-connected", function(data) {
-        const { userId, email } = data;
-        console.log(`👁️  Viewer connected: ${email} (${socket.id})`);
-        
+    socket.on("viewer-connected", function (data) {
+        // Use VERIFIED userId from session, not client data
+        const userId = socket.userId;
+        console.log(`👁️  Viewer connected: user ${userId} (${socket.id})`);
+
         // Join user room to receive real-time device updates
         if (userId) {
             socket.join(`user_${userId}`);
-            
+
             // Send currently online registered devices
             const userDevices = Array.from(devices.values())
                 .filter(d => d.userId === userId && d.isRegistered === true);
             socket.emit("devices-update", userDevices);
         }
     });
-    
+
     // Handle device registration with name, user, and device info
-    socket.on("register-device", async function(data) {
+    socket.on("register-device", async function (data) {
+        // Use VERIFIED userId from session, not client data
+        const verifiedUserId = socket.userId;
         const device = {
             id: socket.id,
-            name: data.name || `Device ${socket.id.substring(0, 5)}`,
-            userId: data.userId || null,
+            name: sanitizeInput(data.name) || `Device ${socket.id.substring(0, 5)}`,
+            userId: verifiedUserId,
             isRegistered: data.isRegistered || false,
             lastSeen: new Date(),
             latitude: null,
@@ -308,33 +384,34 @@ io.on("connection", function(socket) {
             deviceType: data.deviceInfo?.deviceType || 'Unknown Device',
             deviceIcon: data.deviceInfo?.deviceIcon || '📱'
         };
-        
+
         devices.set(socket.id, device);
-        
+
         // Join user-specific room for instant broadcasting
-        if (data.userId) {
-            socket.join(`user_${data.userId}`);
+        if (verifiedUserId) {
+            socket.join(`user_${verifiedUserId}`);
         }
-        
+
         // Only update user's devices in database if device is registered
-        if (data.isRegistered && data.userId && usersDB[data.userId]) {
-            if (!usersDB[data.userId].devices.includes(data.name)) {
-                usersDB[data.userId].devices.push(data.name);
-                await saveUser(usersDB[data.userId]);
+        if (data.isRegistered && verifiedUserId && usersDB[verifiedUserId]) {
+            const sanitizedName = sanitizeInput(data.name);
+            if (!usersDB[verifiedUserId].devices.includes(sanitizedName)) {
+                usersDB[verifiedUserId].devices.push(sanitizedName);
+                await saveUser(usersDB[verifiedUserId]);
             }
         }
-        
+
         // Send only registered devices to this user
-        if (data.userId) {
+        if (verifiedUserId) {
             const userDevices = Array.from(devices.values())
-                .filter(d => d.userId === data.userId && d.isRegistered === true);
+                .filter(d => d.userId === verifiedUserId && d.isRegistered === true);
             // Broadcast to ALL devices in this user's room (including the new one)
-            io.to(`user_${data.userId}`).emit("devices-update", userDevices);
+            io.to(`user_${verifiedUserId}`).emit("devices-update", userDevices);
         }
     });
-    
+
     // Handle location updates (encrypted)
-    socket.on("send-location", async function(data) {
+    socket.on("send-location", async function (data) {
         const device = devices.get(socket.id);
         if (device && device.isRegistered) { // Only process location for registered devices
             // Store encrypted data without decrypting (E2EE)
@@ -342,12 +419,12 @@ io.on("connection", function(socket) {
             device.battery = data.battery || null;
             device.charging = data.charging || false;
             device.lastSeen = new Date();
-            
+
             // Store plain coordinates for sharing (if sharing is enabled)
             if (data.latitude !== undefined && data.longitude !== undefined) {
                 device.latitude = data.latitude;
                 device.longitude = data.longitude;
-                
+
                 // Save last known location to database using fingerprint
                 if (device.userId && device.fingerprint) {
                     console.log(`💾 Saving location for user ${device.userId}, device fingerprint: ${device.fingerprint?.substring(0, 50)}...`);
@@ -360,17 +437,17 @@ io.on("connection", function(socket) {
                     });
                 }
             }
-            
+
             // Broadcast instantly to user's room (all their registered devices)
             if (device.userId) {
                 // Send location to all of this user's devices (instant room broadcast)
-                io.to(`user_${device.userId}`).emit("receive-location", { 
-                    id: socket.id, 
+                io.to(`user_${device.userId}`).emit("receive-location", {
+                    id: socket.id,
                     encrypted: data.encrypted,
                     battery: data.battery,
                     charging: data.charging
                 });
-                
+
                 // Update devices list with battery info (instant room broadcast)
                 const userDevices = Array.from(devices.values())
                     .filter(d => d.userId === device.userId && d.isRegistered === true);
@@ -378,68 +455,75 @@ io.on("connection", function(socket) {
             }
         }
     });
-    
-    // Handle alert request
-    socket.on("alert-device", function(targetId) {
-        io.to(targetId).emit("play-alert");
+
+    // Handle alert request (with ownership check)
+    socket.on("alert-device", function (targetId) {
+        const senderDevice = devices.get(socket.id);
+        const targetDevice = devices.get(targetId);
+        // Only allow alerting devices owned by the same user
+        if (senderDevice && targetDevice && senderDevice.userId === targetDevice.userId) {
+            io.to(targetId).emit("play-alert");
+        } else {
+            console.log(`⚠️ Unauthorized alert attempt from ${socket.id} to ${targetId}`);
+        }
     });
-    
+
     // Handle request location from device
-    socket.on("request-location", function(targetId) {
+    socket.on("request-location", function (targetId) {
         const device = devices.get(socket.id);
         const targetDevice = devices.get(targetId);
-        
+
         // Only allow location requests from devices in the same user account
         if (device && targetDevice && device.userId === targetDevice.userId) {
             io.to(targetId).emit("location-requested", socket.id);
             console.log(`Location requested for device ${targetId} by ${socket.id}`);
         }
     });
-    
+
     // Handle start sharing
-    socket.on("start-sharing", function() {
+    socket.on("start-sharing", function () {
         const device = devices.get(socket.id);
         if (device) {
             // Generate unique share token
             const token = crypto.randomBytes(16).toString('hex');
             const expiresAt = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
-            
+
             shareTokens.set(token, {
                 socketId: socket.id,
                 userId: device.userId,
                 deviceName: device.name,
                 expiresAt: expiresAt
             });
-            
+
             device.isSharing = true;
             device.shareToken = token;
-            
+
             // Send share link back to user
             socket.emit('share-link', { token: token, expiresAt: expiresAt });
             socket.emit('share-status', { isSharing: true });
-            
+
             console.log(`Sharing started for device ${socket.id}, token: ${token}`);
         }
     });
-    
+
     // Handle stop sharing
-    socket.on("stop-sharing", function() {
+    socket.on("stop-sharing", function () {
         const device = devices.get(socket.id);
         if (device && device.shareToken) {
             shareTokens.delete(device.shareToken);
             device.isSharing = false;
             device.shareToken = null;
-            
+
             socket.emit('share-status', { isSharing: false });
             console.log(`Sharing stopped for device ${socket.id}`);
         }
     });
-    
+
     // Handle disconnect
-    socket.on("disconnect", async function() {
+    socket.on("disconnect", async function () {
         const device = devices.get(socket.id);
         const userId = device?.userId;
-        
+
         // Save last known location to database before device disconnects
         if (device && device.isRegistered && device.userId && device.latitude && device.longitude && device.fingerprint) {
             console.log(`💾 Saving last location on disconnect for device ${socket.id}, fingerprint: ${device.fingerprint?.substring(0, 50)}...`);
@@ -452,19 +536,19 @@ io.on("connection", function(socket) {
             });
             console.log(`✅ Saved last known location for device ${socket.id}`);
         }
-        
+
         // Clean up share token on disconnect
         if (device && device.shareToken) {
             shareTokens.delete(device.shareToken);
         }
-        
+
         devices.delete(socket.id);
-        
+
         // Notify user's room instantly (all their other devices)
         if (userId) {
             io.to(`user_${userId}`).emit("user-disconnected", socket.id);
         }
-        
+
         console.log("Device disconnected:", socket.id);
     });
 });
@@ -490,28 +574,28 @@ app.get("/login", function (req, res) {
     res.render("login");
 });
 
-app.get('/logout', function(req, res) {
-    req.logout(function(err) {
+app.get('/logout', function (req, res) {
+    req.logout(function (err) {
         if (err) { return next(err); }
         res.redirect('/login');
     });
 });
 
 // Email/Password Login Route (Web only - no registration on web)
-app.post('/login', async function(req, res) {
+app.post('/login', loginLimiter, async function (req, res) {
     try {
         const { email, password } = req.body;
-        
+
         // Validate input
         if (!email || !password) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Email and password are required' 
+            return res.status(400).json({
+                success: false,
+                message: 'Email and password are required'
             });
         }
-        
+
         const normalizedEmail = email.toLowerCase();
-        
+
         // Find user by email
         let user = null;
         if (useMongoDb) {
@@ -519,58 +603,58 @@ app.post('/login', async function(req, res) {
         } else {
             user = Object.values(usersDB).find(u => u.email === normalizedEmail);
         }
-        
+
         if (!user) {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Invalid email or password' 
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid email or password'
             });
         }
-        
+
         // Check if user registered with Google OAuth
         if (!user.password) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'This account uses Google Sign-In. Please use the Google button to login.' 
+            return res.status(400).json({
+                success: false,
+                message: 'This account uses Google Sign-In. Please use the Google button to login.'
             });
         }
-        
+
         // Verify password
         const passwordMatch = await bcrypt.compare(password, user.password);
-        
+
         if (!passwordMatch) {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Invalid email or password' 
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid email or password'
             });
         }
-        
+
         // Update cache
         usersDB[user.id] = user;
-        
+
         // Log the user in
-        req.login(user, function(err) {
+        req.login(user, function (err) {
             if (err) {
                 console.error('Error logging in:', err);
-                return res.status(500).json({ 
-                    success: false, 
-                    message: 'Login failed. Please try again.' 
+                return res.status(500).json({
+                    success: false,
+                    message: 'Login failed. Please try again.'
                 });
             }
-            
+
             // Ensure session is saved before sending response
-            req.session.save(function(saveErr) {
+            req.session.save(function (saveErr) {
                 if (saveErr) {
                     console.error('Error saving session:', saveErr);
-                    return res.status(500).json({ 
-                        success: false, 
-                        message: 'Login failed. Please try again.' 
+                    return res.status(500).json({
+                        success: false,
+                        message: 'Login failed. Please try again.'
                     });
                 }
-                
+
                 console.log(`✅ User logged in: ${email}`);
-                res.json({ 
-                    success: true, 
+                res.json({
+                    success: true,
                     message: 'Login successful',
                     user: {
                         id: user.id,
@@ -580,25 +664,25 @@ app.post('/login', async function(req, res) {
                 });
             });
         });
-        
+
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Login failed. Please try again.' 
+        res.status(500).json({
+            success: false,
+            message: 'Login failed. Please try again.'
         });
     }
 });
 
-app.get('/api/user', isAuthenticated, function(req, res) {
+app.get('/api/user', isAuthenticated, function (req, res) {
     res.json(req.user);
 });
 
 // API endpoint to get last known locations for all registered devices
-app.get('/api/last-known-locations', isAuthenticated, async function(req, res) {
+app.get('/api/last-known-locations', isAuthenticated, async function (req, res) {
     try {
         const userId = req.user.id;
-        
+
         // Get user from cache or database
         let user = usersDB[userId];
         if (!user && useMongoDb) {
@@ -607,11 +691,11 @@ app.get('/api/last-known-locations', isAuthenticated, async function(req, res) {
                 usersDB[userId] = user;
             }
         }
-        
+
         if (!user || !user.registeredDevices) {
             return res.json({ devices: [] });
         }
-        
+
         // Return ALL registered devices with their last known locations (if any)
         const devicesData = user.registeredDevices.map(d => ({
             id: d.id,
@@ -628,9 +712,9 @@ app.get('/api/last-known-locations', isAuthenticated, async function(req, res) {
             hasLocation: !!(d.lastLatitude && d.lastLongitude),
             isOnline: false // Will be updated by frontend if device is connected
         }));
-        
+
         console.log(`📍 Returning ${devicesData.length} registered devices, ${devicesData.filter(d => d.hasLocation).length} with location`);
-        
+
         res.json({ devices: devicesData });
     } catch (error) {
         console.error('Error fetching last known locations:', error);
@@ -640,14 +724,14 @@ app.get('/api/last-known-locations', isAuthenticated, async function(req, res) {
 
 // API endpoint to register a device
 // API endpoint to update device location
-app.post('/api/update-location', isAuthenticated, async function(req, res) {
+app.post('/api/update-location', isAuthenticated, async function (req, res) {
     try {
         const userId = req.user.id;
         const { latitude, longitude, accuracy } = req.body;
         const fingerprint = req.headers['user-agent'];
-        
+
         console.log(`📍 Location update from user ${userId}: ${latitude}, ${longitude}`);
-        
+
         // Get user from cache or database
         let user = usersDB[userId];
         if (!user && useMongoDb) {
@@ -656,26 +740,26 @@ app.post('/api/update-location', isAuthenticated, async function(req, res) {
                 usersDB[userId] = user;
             }
         }
-        
+
         if (!user || !user.registeredDevices) {
             return res.status(404).json({ success: false, message: 'User or device not found' });
         }
-        
+
         // Find the registered device
         const device = user.registeredDevices.find(d => d.fingerprint === fingerprint);
         if (!device) {
             return res.status(404).json({ success: false, message: 'Device not registered' });
         }
-        
+
         // Update device location
         device.latitude = latitude;
         device.longitude = longitude;
         device.accuracy = accuracy;
         device.lastLocationUpdate = new Date().toISOString();
-        
+
         // Save to database
         await saveUser(user);
-        
+
         // Broadcast location to all user's connected devices via socket
         io.to(`user_${userId}`).emit('location-updated', {
             deviceId: device.id,
@@ -685,7 +769,7 @@ app.post('/api/update-location', isAuthenticated, async function(req, res) {
             accuracy,
             timestamp: device.lastLocationUpdate
         });
-        
+
         res.json({ success: true, message: 'Location updated' });
     } catch (error) {
         console.error('Error updating location:', error);
@@ -694,22 +778,22 @@ app.post('/api/update-location', isAuthenticated, async function(req, res) {
 });
 
 // API endpoint for mobile app to login with email/password
-app.post('/api/app/login', async function(req, res) {
+app.post('/api/app/login', loginLimiter, async function (req, res) {
     try {
         const { email, password } = req.body;
-        
+
         // Validate input
         if (!email || !password) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Email and password are required' 
+            return res.status(400).json({
+                success: false,
+                message: 'Email and password are required'
             });
         }
-        
+
         console.log(`📱 Mobile app email/password login attempt: ${email}`);
-        
+
         const normalizedEmail = email.toLowerCase();
-        
+
         // Find user by email
         let user = null;
         if (useMongoDb) {
@@ -717,53 +801,53 @@ app.post('/api/app/login', async function(req, res) {
         } else {
             user = Object.values(usersDB).find(u => u.email === normalizedEmail);
         }
-        
+
         if (!user) {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Invalid email or password' 
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid email or password'
             });
         }
-        
+
         // Check if user has a password set
         if (!user.password) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Please use the Forgot Password feature to set a password for your account.' 
+            return res.status(400).json({
+                success: false,
+                message: 'Please use the Forgot Password feature to set a password for your account.'
             });
         }
-        
+
         // Verify password
         const passwordMatch = await bcrypt.compare(password, user.password);
-        
+
         if (!passwordMatch) {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Invalid email or password' 
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid email or password'
             });
         }
-        
+
         // Update cache
         usersDB[user.id] = user;
-        
+
         // Generate long-lived JWT for mobile app
         const appToken = generateAppToken(user.id, user.email);
-        
+
         console.log(`✅ Mobile app email/password login successful: ${email} (userId: ${user.id})`);
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             userId: user.id,
             name: user.name,
             email: user.email,
             token: appToken,
             tokenExpiry: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 days from now
         });
-        
+
     } catch (error) {
         console.error('Mobile app login error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Login failed. Please try again.' 
+        res.status(500).json({
+            success: false,
+            message: 'Login failed. Please try again.'
         });
     }
 });
@@ -773,20 +857,20 @@ app.post('/api/app/login', async function(req, res) {
 // ===============================
 
 // Step 1: Request password reset - sends verification code to email
-app.post('/api/forgot-password', async function(req, res) {
+app.post('/api/forgot-password', loginLimiter, async function (req, res) {
     try {
         const { email } = req.body;
-        
+
         if (!email) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Email is required' 
+            return res.status(400).json({
+                success: false,
+                message: 'Email is required'
             });
         }
-        
+
         const normalizedEmail = email.toLowerCase();
         console.log(`🔐 Password reset requested for: ${normalizedEmail}`);
-        
+
         // Find user by email
         let user = null;
         if (useMongoDb) {
@@ -794,24 +878,24 @@ app.post('/api/forgot-password', async function(req, res) {
         } else {
             user = Object.values(usersDB).find(u => u.email === normalizedEmail);
         }
-        
+
         // Always return success to prevent email enumeration attacks
         // But only send email if user exists
         if (user && user.password) {
             // Check rate limiting (max 3 requests per 10 minutes)
             const existingRequest = passwordResetCodes.get(normalizedEmail);
-            if (existingRequest && existingRequest.attempts >= 3 && 
+            if (existingRequest && existingRequest.attempts >= 3 &&
                 Date.now() < existingRequest.rateLimitExpires) {
                 return res.status(429).json({
                     success: false,
                     message: 'Too many reset attempts. Please try again in 10 minutes.'
                 });
             }
-            
+
             // Generate verification code
             const code = generateVerificationCode();
             const expiresAt = Date.now() + (10 * 60 * 1000); // 10 minutes
-            
+
             // Store the code
             passwordResetCodes.set(normalizedEmail, {
                 code,
@@ -820,7 +904,7 @@ app.post('/api/forgot-password', async function(req, res) {
                 rateLimitExpires: Date.now() + (10 * 60 * 1000),
                 userId: user.id
             });
-            
+
             // Send email
             try {
                 await sendPasswordResetEmail(normalizedEmail, code, user.name);
@@ -832,57 +916,48 @@ app.post('/api/forgot-password', async function(req, res) {
                     message: 'Failed to send email. Please try again later.'
                 });
             }
-        } else if (user && !user.password) {
-            // User exists but uses Google OAuth only
-            return res.json({
-                success: false,
-                message: 'This account uses Google Sign-In. Please login with Google.'
-            });
         } else {
-            // User not found - return error
-            return res.json({
-                success: false,
-                message: 'No account found with this email. Please check your email or register.'
-            });
+            // Return same message for all cases to prevent email enumeration
+            console.log(`Password reset: no eligible account for ${normalizedEmail}`);
         }
-        
+
         // Email sent successfully
         res.json({
             success: true,
             message: 'Verification code sent to your email.'
         });
-        
+
     } catch (error) {
         console.error('Password reset request error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Something went wrong. Please try again.' 
+        res.status(500).json({
+            success: false,
+            message: 'Something went wrong. Please try again.'
         });
     }
 });
 
 // Step 2: Verify the reset code
-app.post('/api/verify-reset-code', async function(req, res) {
+app.post('/api/verify-reset-code', async function (req, res) {
     try {
         const { email, code } = req.body;
-        
+
         if (!email || !code) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Email and verification code are required' 
+            return res.status(400).json({
+                success: false,
+                message: 'Email and verification code are required'
             });
         }
-        
+
         const normalizedEmail = email.toLowerCase();
         const resetData = passwordResetCodes.get(normalizedEmail);
-        
+
         if (!resetData) {
             return res.status(400).json({
                 success: false,
                 message: 'No reset request found. Please request a new code.'
             });
         }
-        
+
         if (Date.now() > resetData.expiresAt) {
             passwordResetCodes.delete(normalizedEmail);
             return res.status(400).json({
@@ -890,57 +965,58 @@ app.post('/api/verify-reset-code', async function(req, res) {
                 message: 'Verification code has expired. Please request a new one.'
             });
         }
-        
+
         if (resetData.code !== code) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid verification code. Please check and try again.'
             });
         }
-        
+
         // Code is valid - generate a temporary token for password reset
         const resetToken = jwt.sign(
             { email: normalizedEmail, purpose: 'password_reset' },
             JWT_SECRET,
             { expiresIn: '15m' }
         );
-        
+
         console.log(`✅ Reset code verified for: ${normalizedEmail}`);
         res.json({
             success: true,
             message: 'Code verified successfully.',
             resetToken
         });
-        
+
     } catch (error) {
         console.error('Code verification error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Verification failed. Please try again.' 
+        res.status(500).json({
+            success: false,
+            message: 'Verification failed. Please try again.'
         });
     }
 });
 
 // Step 3: Reset password with verified token
-app.post('/api/reset-password', async function(req, res) {
+app.post('/api/reset-password', async function (req, res) {
     try {
         const { resetToken, newPassword } = req.body;
-        
+
         if (!resetToken || !newPassword) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Reset token and new password are required' 
-            });
-        }
-        
-        // Validate password strength
-        if (newPassword.length < 6) {
             return res.status(400).json({
                 success: false,
-                message: 'Password must be at least 6 characters long.'
+                message: 'Reset token and new password are required'
             });
         }
-        
+
+        // Validate password strength
+        const passwordError = validatePassword(newPassword);
+        if (passwordError) {
+            return res.status(400).json({
+                success: false,
+                message: passwordError
+            });
+        }
+
         // Verify reset token
         let tokenPayload;
         try {
@@ -951,16 +1027,16 @@ app.post('/api/reset-password', async function(req, res) {
                 message: 'Invalid or expired reset token. Please start over.'
             });
         }
-        
+
         if (tokenPayload.purpose !== 'password_reset') {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid reset token.'
             });
         }
-        
+
         const normalizedEmail = tokenPayload.email;
-        
+
         // Find user
         let user = null;
         if (useMongoDb) {
@@ -968,76 +1044,77 @@ app.post('/api/reset-password', async function(req, res) {
         } else {
             user = Object.values(usersDB).find(u => u.email === normalizedEmail);
         }
-        
+
         if (!user) {
             return res.status(404).json({
                 success: false,
                 message: 'User not found.'
             });
         }
-        
+
         // Hash new password
         const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
-        
+
         // Update user password
         user.password = hashedPassword;
         user.passwordUpdatedAt = new Date().toISOString();
-        
+
         // Save to database
         await saveUser(user);
-        
+
         // Clear the reset code
         passwordResetCodes.delete(normalizedEmail);
-        
+
         console.log(`✅ Password reset successful for: ${normalizedEmail}`);
         res.json({
             success: true,
             message: 'Password reset successfully. You can now login with your new password.'
         });
-        
+
     } catch (error) {
         console.error('Password reset error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Password reset failed. Please try again.' 
+        res.status(500).json({
+            success: false,
+            message: 'Password reset failed. Please try again.'
         });
     }
 });
 
 // API endpoint for mobile app to register with email/password
-app.post('/api/app/register', async function(req, res) {
+app.post('/api/app/register', loginLimiter, async function (req, res) {
     try {
         const { email, password, name } = req.body;
-        
+
         // Validate input
         if (!email || !password || !name) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Email, password, and name are required' 
+            return res.status(400).json({
+                success: false,
+                message: 'Email, password, and name are required'
             });
         }
-        
+
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Invalid email format' 
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid email format'
             });
         }
-        
+
         // Validate password strength
-        if (password.length < 6) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Password must be at least 6 characters' 
+        const passwordError = validatePassword(password);
+        if (passwordError) {
+            return res.status(400).json({
+                success: false,
+                message: passwordError
             });
         }
-        
+
         console.log(`📱 Mobile app registration attempt: ${email}`);
-        
+
         const normalizedEmail = email.toLowerCase();
-        
+
         // 🔗 ACCOUNT LINKING: Check if user exists with this email
         let existingUser = null;
         if (useMongoDb) {
@@ -1045,22 +1122,22 @@ app.post('/api/app/register', async function(req, res) {
         } else {
             existingUser = Object.values(usersDB).find(u => u.email === normalizedEmail);
         }
-        
+
         if (existingUser) {
             // User exists - check if they registered with Google
             if (existingUser.googleId && !existingUser.password) {
                 // User registered with Google, now adding password
                 console.log(`🔗 Adding password to existing Google account: ${email}`);
-                
+
                 const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
                 existingUser.password = hashedPassword;
                 existingUser.authType = 'both';
                 await saveUser(existingUser);
-                
+
                 const appToken = generateAppToken(existingUser.id, existingUser.email);
-                
+
                 console.log(`✅ Password added to Google account: ${email}`);
-                return res.json({ 
+                return res.json({
                     success: true,
                     message: 'Password added to your Google account',
                     userId: existingUser.id,
@@ -1071,16 +1148,16 @@ app.post('/api/app/register', async function(req, res) {
                 });
             } else {
                 // User already has email/password account
-                return res.status(400).json({ 
-                    success: false, 
-                    message: 'Email already registered. Please login instead.' 
+                return res.status(400).json({
+                    success: false,
+                    message: 'Email already registered. Please login instead.'
                 });
             }
         }
-        
+
         // Hash password
         const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-        
+
         // Create new user
         const userId = crypto.randomBytes(16).toString('hex');
         const newUser = {
@@ -1094,15 +1171,15 @@ app.post('/api/app/register', async function(req, res) {
             registeredDevices: [],
             createdAt: new Date().toISOString()
         };
-        
+
         // Save user
         await saveUser(newUser);
-        
+
         // Generate JWT for mobile app
         const appToken = generateAppToken(newUser.id, newUser.email);
-        
+
         console.log(`✅ Mobile app registration successful: ${email} (userId: ${newUser.id})`);
-        res.json({ 
+        res.json({
             success: true,
             message: 'Registration successful',
             userId: newUser.id,
@@ -1111,30 +1188,30 @@ app.post('/api/app/register', async function(req, res) {
             token: appToken,
             tokenExpiry: Date.now() + (7 * 24 * 60 * 60 * 1000)
         });
-        
+
     } catch (error) {
         console.error('Mobile app registration error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Registration failed. Please try again.' 
+        res.status(500).json({
+            success: false,
+            message: 'Registration failed. Please try again.'
         });
     }
 });
 
 // API endpoint to refresh app token (call this before token expires)
-app.post('/api/refresh-token', authenticateMobileApp, async function(req, res) {
+app.post('/api/refresh-token', authenticateMobileApp, async function (req, res) {
     try {
         const { userId, email } = req.appUser;
-        
+
         // Verify user still exists
         const user = await getUserById(userId);
         if (!user) {
             return res.status(401).json({ success: false, message: 'User not found' });
         }
-        
+
         // Generate new token
         const newToken = generateAppToken(userId, email);
-        
+
         console.log(`🔄 Token refreshed for user: ${email}`);
         res.json({
             success: true,
@@ -1148,13 +1225,13 @@ app.post('/api/refresh-token', authenticateMobileApp, async function(req, res) {
 });
 
 // API endpoint for Android app to send location updates (supports JWT and Google ID token)
-app.post('/api/location-update-app', authenticateMobileApp, async function(req, res) {
+app.post('/api/location-update-app', authenticateMobileApp, async function (req, res) {
     try {
         const { latitude, longitude, accuracy, deviceName, battery, charging, timestamp, fingerprint: bodyFingerprint } = req.body;
         const userAgent = req.headers['user-agent'];
         const headerFingerprint = req.headers['x-device-fingerprint'];
         const fingerprint = bodyFingerprint || headerFingerprint || userAgent;
-        
+
         // User is authenticated via middleware
         const { userId, email } = req.appUser;
 
@@ -1212,10 +1289,10 @@ app.post('/api/location-update-app', authenticateMobileApp, async function(req, 
                 battery,
                 charging
             });
-            
+
             console.log(`✅ Location saved from Android app: ${deviceName}`);
         }
-        
+
         res.json({ success: true, message: 'Location updated' });
     } catch (error) {
         console.error('Error processing app location update:', error);
@@ -1300,15 +1377,15 @@ app.post('/api/register-device', isAuthenticated, async function(req, res) {
 */
 
 // Unregister device endpoint
-app.post('/api/unregister-device', isAuthenticated, async function(req, res) {
+app.post('/api/unregister-device', isAuthenticated, async function (req, res) {
     try {
         const userId = req.user.id;
         const { deviceId } = req.body;
-        
+
         if (!deviceId) {
             return res.status(400).json({ success: false, message: 'Device ID required' });
         }
-        
+
         // Get user from cache or database
         let user = usersDB[userId];
         if (!user && useMongoDb) {
@@ -1317,32 +1394,32 @@ app.post('/api/unregister-device', isAuthenticated, async function(req, res) {
                 usersDB[userId] = user;
             }
         }
-        
+
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
-        
+
         if (!user.registeredDevices) {
             return res.status(404).json({ success: false, message: 'No registered devices found' });
         }
-        
+
         // Find device to unregister
         const deviceIndex = user.registeredDevices.findIndex(d => d.id === deviceId);
-        
+
         if (deviceIndex === -1) {
             return res.status(404).json({ success: false, message: 'Device not found' });
         }
-        
+
         // Remove device from array
         const removedDevice = user.registeredDevices.splice(deviceIndex, 1)[0];
-        
+
         // Save to database
         await saveUser(user);
-        
+
         console.log(`Device unregistered: ${removedDevice.name} for user ${userId}`);
-        
-        res.json({ 
-            success: true, 
+
+        res.json({
+            success: true,
             message: 'Device unregistered successfully',
             deviceName: removedDevice.name
         });
@@ -1353,29 +1430,29 @@ app.post('/api/unregister-device', isAuthenticated, async function(req, res) {
 });
 
 // Delete user account endpoint
-app.post('/api/delete-account', isAuthenticated, async function(req, res) {
+app.post('/api/delete-account', isAuthenticated, async function (req, res) {
     try {
         const userId = req.user.id;
-        
+
         // Delete from database
         if (useMongoDb) {
             await database.deleteUser(userId);
         }
-        
+
         // Remove from cache
         delete usersDB[userId];
-        
+
         // Logout user
-        req.logout(function(err) {
+        req.logout(function (err) {
             if (err) {
                 console.error('Logout error:', err);
             }
         });
-        
+
         console.log(`✅ Account deleted for user: ${userId}`);
-        
-        res.json({ 
-            success: true, 
+
+        res.json({
+            success: true,
             message: 'Account deleted successfully'
         });
     } catch (error) {
@@ -1385,21 +1462,21 @@ app.post('/api/delete-account', isAuthenticated, async function(req, res) {
 });
 
 // Clear location history endpoint
-app.post('/api/clear-location-history', isAuthenticated, async function(req, res) {
+app.post('/api/clear-location-history', isAuthenticated, async function (req, res) {
     try {
         const userId = req.user.id;
-        
+
         // Clear location history in database
         if (useMongoDb) {
             await database.clearUserLocationHistory(userId);
         }
-        
+
         // Update cache
         let user = usersDB[userId];
         if (!user && useMongoDb) {
             user = await database.getUser(userId);
         }
-        
+
         if (user && user.registeredDevices) {
             user.registeredDevices = user.registeredDevices.map(device => ({
                 ...device,
@@ -1410,11 +1487,11 @@ app.post('/api/clear-location-history', isAuthenticated, async function(req, res
             }));
             usersDB[userId] = user;
         }
-        
+
         console.log(`✅ Location history cleared for user: ${userId}`);
-        
-        res.json({ 
-            success: true, 
+
+        res.json({
+            success: true,
             message: 'Location history cleared successfully'
         });
     } catch (error) {
@@ -1423,49 +1500,64 @@ app.post('/api/clear-location-history', isAuthenticated, async function(req, res
     }
 });
 
-// Admin middleware
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+// Admin middleware (bcrypt comparison + rate limiting)
+let adminPasswordHash = null;
+const ADMIN_PASSWORD_RAW = process.env.ADMIN_PASSWORD;
+if (ADMIN_PASSWORD_RAW && ADMIN_PASSWORD_RAW !== 'admin123') {
+    bcrypt.hash(ADMIN_PASSWORD_RAW, SALT_ROUNDS).then(hash => {
+        adminPasswordHash = hash;
+        console.log('✅ Admin password hashed for secure comparison');
+    });
+} else {
+    console.warn('⚠️  ADMIN_PASSWORD not set or using default — admin panel disabled');
+}
 
-function isAdmin(req, res, next) {
+async function isAdmin(req, res, next) {
+    if (!adminPasswordHash) {
+        return res.status(503).json({ error: 'Admin panel not configured' });
+    }
     const auth = req.headers.authorization;
     if (auth && auth.startsWith('Bearer ')) {
-        const token = auth.substring(7);
-        if (token === ADMIN_PASSWORD) {
-            return next();
+        const password = auth.substring(7);
+        try {
+            const match = await bcrypt.compare(password, adminPasswordHash);
+            if (match) return next();
+        } catch (e) {
+            console.error('Admin auth error:', e);
         }
     }
     res.status(401).json({ error: 'Unauthorized' });
 }
 
 // Privacy policy page
-app.get('/privacy', function(req, res) {
+app.get('/privacy', function (req, res) {
     res.render('privacy');
 });
 
 // Admin dashboard page
-app.get('/admin', function(req, res) {
+app.get('/admin', function (req, res) {
     res.render('admin');
 });
 
 // Admin API - Get all users and devices
-app.get('/api/admin/users', isAdmin, async function(req, res) {
+app.get('/api/admin/users', adminLimiter, isAdmin, async function (req, res) {
     try {
         // Get real IP address (works with proxies like Render)
-        const realIP = req.headers['x-forwarded-for']?.split(',')[0].trim() || 
-                       req.headers['x-real-ip'] || 
-                       req.ip || 
-                       req.connection.remoteAddress || 
-                       'Unknown';
-        
+        const realIP = req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+            req.headers['x-real-ip'] ||
+            req.ip ||
+            req.connection.remoteAddress ||
+            'Unknown';
+
         // Log admin access
         if (useMongoDb) {
             await database.logAdminAccess('VIEW_ALL_USERS', {
                 ip: realIP
             });
         }
-        
+
         const allUsers = await database.getAllUsersArray();
-        
+
         const stats = {
             totalUsers: allUsers.length,
             totalDevices: allUsers.reduce((sum, user) => {
@@ -1491,7 +1583,7 @@ app.get('/api/admin/users', isAdmin, async function(req, res) {
                 }))
             }))
         };
-        
+
         res.json(stats);
     } catch (error) {
         console.error('Admin API error:', error);
@@ -1500,11 +1592,11 @@ app.get('/api/admin/users', isAdmin, async function(req, res) {
 });
 
 // Admin API - Get audit logs
-app.get('/api/admin/audit-logs', isAdmin, async function(req, res) {
+app.get('/api/admin/audit-logs', isAdmin, async function (req, res) {
     try {
         const limit = parseInt(req.query.limit) || 100;
         const logs = await database.getAdminAuditLog(limit);
-        
+
         res.json({
             success: true,
             logs: logs,
@@ -1517,40 +1609,40 @@ app.get('/api/admin/audit-logs', isAdmin, async function(req, res) {
 });
 
 // Public share route
-app.get('/share/:token', function(req, res) {
+app.get('/share/:token', function (req, res) {
     const token = req.params.token;
     const shareData = shareTokens.get(token);
-    
+
     if (!shareData) {
         return res.status(404).send('Share link not found or expired');
     }
-    
+
     // Check if expired
     if (Date.now() > shareData.expiresAt) {
         shareTokens.delete(token);
         return res.status(404).send('Share link expired');
     }
-    
-    res.render('share', { 
+
+    res.render('share', {
         deviceName: shareData.deviceName,
-        token: token 
+        token: token
     });
 });
 
 // API endpoint for shared location
-app.get('/api/share/:token', function(req, res) {
+app.get('/api/share/:token', function (req, res) {
     const token = req.params.token;
     const shareData = shareTokens.get(token);
-    
+
     if (!shareData || Date.now() > shareData.expiresAt) {
         return res.status(404).json({ error: 'Share link not found or expired' });
     }
-    
+
     const device = devices.get(shareData.socketId);
     if (!device) {
         return res.status(404).json({ error: 'Device offline' });
     }
-    
+
     res.json({
         deviceName: device.name,
         deviceType: device.deviceType,
@@ -1592,14 +1684,14 @@ initializeDatabase().then(() => {
     server.listen(PORT, () => {
         console.log(`🚀 Server listening on port ${PORT}`);
         console.log(`📊 Database: ${useMongoDb ? 'MongoDB Atlas (Cloud)' : 'Local File Storage'}`);
-        
+
         // Keep-alive ping to prevent Render free tier from sleeping (runs every 14 minutes)
         // Only run in production (not on localhost)
         const isProduction = process.env.NODE_ENV === 'production' || process.env.CALLBACK_URL?.includes('render.com') || process.env.CALLBACK_URL?.includes('railway.app');
-        
+
         if (isProduction) {
             const appUrl = process.env.CALLBACK_URL?.replace('/auth/google/callback', '') || `https://realtime-device-tracker-s9ua.onrender.com`;
-            
+
             setInterval(async () => {
                 try {
                     const https = require('https');
@@ -1612,7 +1704,7 @@ initializeDatabase().then(() => {
                     console.log('⚠️ Keep-alive error:', error.message);
                 }
             }, 14 * 60 * 1000); // 14 minutes (before 15-min timeout)
-            
+
             console.log('⏰ Keep-alive service activated (pings every 14 minutes to prevent sleep)');
         } else {
             console.log('💻 Running in development mode - keep-alive disabled');
