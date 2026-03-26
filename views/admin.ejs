@@ -348,10 +348,7 @@
             </div>
         </div>
 
-        <div class="map-container">
-            <h2>📍 All Device Locations</h2>
-            <div id="admin-map"></div>
-        </div>
+        <!-- 🔒 Map removed for E2E privacy — admin cannot view user locations -->
 
         <div class="users-section">
             <h2>👥 Users & Devices</h2>
@@ -414,14 +411,6 @@
                 // Display users
                 displayUsers(data.users);
 
-                // Initialize map (only once)
-                if (!map) {
-                    initMap();
-                }
-                
-                // Update markers
-                updateMarkers(data.users);
-
             } catch (error) {
                 alert('Error loading dashboard: ' + error.message);
             }
@@ -445,7 +434,7 @@
                             <th>Devices</th>
                             <th>Registered Date</th>
                             <th>Unregistered Date</th>
-                            <th>Location</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -467,7 +456,7 @@
                             <td><span style="color: #5f6368;">No devices</span></td>
                             <td>-</td>
                             <td>-</td>
-                            <td>-</td>
+                            <td><span style="color: #5f6368;">-</span></td>
                         </tr>
                     `;
                 } else {
@@ -494,16 +483,12 @@
                                 <td>${new Date(device.registeredAt).toLocaleDateString()}</td>
                                 <td>${device.unregisteredAt ? new Date(device.unregisteredAt).toLocaleDateString() : '-'}</td>
                                 <td>
-                                    ${device.latitude && device.longitude ? `
-                                        <a href="https://www.google.com/maps?q=${device.latitude},${device.longitude}" 
-                                           target="_blank" 
-                                           class="location-link">
-                                            📍 ${device.latitude.toFixed(5)}, ${device.longitude.toFixed(5)}
-                                        </a>
+                                    ${device.hasLocation ? `
+                                        <span style="color: #34a853; font-weight: 500;">🟢 Online</span>
                                         <div style="font-size: 11px; color: #5f6368; margin-top: 4px;">
-                                            ${new Date(device.lastLocationUpdate).toLocaleString()}
+                                            Last seen: ${device.lastLocationUpdate ? new Date(device.lastLocationUpdate).toLocaleString() : 'Recently'}
                                         </div>
-                                    ` : '<span style="color: #ea4335;">No location</span>'}
+                                    ` : '<span style="color: #ea4335;">🔴 Offline</span>'}
                                 </td>
                             </tr>
                         `;
@@ -519,49 +504,7 @@
             container.innerHTML = tableHTML;
         }
 
-        function initMap() {
-            map = L.map('admin-map').setView([20, 0], 2);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
-        }
-
-        function updateMarkers(users) {
-            // Clear existing markers
-            markers.forEach(marker => map.removeLayer(marker));
-            markers.length = 0;
-
-            // Add markers for all devices with locations
-            const colors = ['🔴', '🔵', '🟢', '🟡', '🟣', '🟠'];
-            let colorIndex = 0;
-
-            users.forEach(user => {
-                const userColor = colors[colorIndex % colors.length];
-                colorIndex++;
-
-                user.devices.forEach(device => {
-                    if (device.latitude && device.longitude) {
-                        const marker = L.marker([device.latitude, device.longitude]).addTo(map);
-                        marker.bindPopup(`
-                            <div style="min-width: 200px;">
-                                <strong>${userColor} ${user.name}</strong><br>
-                                <strong>${device.icon} ${device.name}</strong><br>
-                                <small>${device.type} - ${device.model}</small><br>
-                                <small>📍 ${device.latitude.toFixed(5)}, ${device.longitude.toFixed(5)}</small><br>
-                                <small>🕐 ${new Date(device.lastLocationUpdate).toLocaleString()}</small>
-                            </div>
-                        `);
-                        markers.push(marker);
-                    }
-                });
-            });
-
-            // Fit map to show all markers
-            if (markers.length > 0) {
-                const group = L.featureGroup(markers);
-                map.fitBounds(group.getBounds().pad(0.1));
-            }
-        }
+        // 🔒 Map and marker functions removed — admin cannot view user locations (E2E privacy)
 
         function logout() {
             adminToken = '';

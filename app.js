@@ -1574,10 +1574,9 @@ app.get('/api/admin/users', adminLimiter, isAdmin, async function (req, res) {
                     icon: device.icon || '📱',
                     type: device.type,
                     model: device.model,
-                    // Use the most recent location fields (Android uses lastLatitude/lastLongitude)
-                    latitude: device.lastLatitude || device.latitude || null,
-                    longitude: device.lastLongitude || device.longitude || null,
-                    accuracy: device.lastAccuracy || device.accuracy || null,
+                    // 🔒 PRIVACY: Do NOT expose location to admin — E2E encryption means server is blind
+                    // Only show whether device has reported recently (online/offline status)
+                    hasLocation: !!(device.lastLatitude || device.latitude),
                     lastLocationUpdate: device.lastSeen || device.lastLocationUpdate || null,
                     registeredAt: device.registeredAt
                 }))
